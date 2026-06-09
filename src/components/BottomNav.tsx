@@ -43,7 +43,7 @@ const MORE_SECTIONS: MoreSection[] = [
       { label: 'Notifications', icon: 'notifications', route: '/notifications' },
       { label: 'Chat',          icon: 'chat',          route: '/chat' },
       { label: 'Register',      icon: 'app-registration', route: '/register' },
-      { label: 'Admin',         icon: 'admin-panel-settings', route: '/admin' },
+      { label: 'Admin',         icon: 'admin-panel-settings', route: '/adminUsers' },
     ],
   },
 ];

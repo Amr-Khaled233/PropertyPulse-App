@@ -52,7 +52,7 @@ export function PortfolioScreen() {
       <AppHeader rightIcon="notifications-outline" onBell={() => nav.navigate('Notifications')} onProfile={() => nav.navigate('Notifications')} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 20 }} showsVerticalScrollIndicator={false}>
         <View>
-          <AppText style={{ fontFamily: fonts.serif, fontSize: 26, color: c.tertiary }}>{t('portfolio.title')}</AppText>
+          <AppText style={{ fontFamily: fonts.serif, fontSize: 26, color: c.tertiary, paddingTop:10}}>{t('portfolio.title')}</AppText>
           <AppText variant="caption" color="textMuted">{t('portfolio.updated', { month })}</AppText>
         </View>
 
@@ -64,7 +64,7 @@ export function PortfolioScreen() {
             </AppText>
             <Badge label={`+${formatPercent(portfolioSummary.changePct)}`} tone="success" icon="arrow-up" />
           </View>
-          <AppText style={{ fontFamily: fonts.heading, fontSize: 32, marginTop: 6 }}>
+          <AppText style={{ fontFamily: fonts.heading, fontSize: 32, marginTop: 6 , paddingTop:10}}>
             {formatCurrency(portfolioSummary.totalValueUsd)}
           </AppText>
         </Card>

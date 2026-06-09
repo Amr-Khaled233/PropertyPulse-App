@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type MenuItem = {
   name: string;
@@ -54,10 +54,11 @@ export const Sidebar = () => {
   };
 
   return (
+    <SafeAreaView>
     <View style={[
       styles.container,
       {
-        paddingTop:    Math.max(insets.top, 24),
+        paddingTop: 100,
         paddingBottom: Math.max(insets.bottom, 16),
       },
     ]}>
@@ -132,6 +133,7 @@ export const Sidebar = () => {
         <Text style={styles.newInvestmentText}>New Investment</Text>
       </TouchableOpacity>
     </View>
+    </SafeAreaView>
   );
 };
 

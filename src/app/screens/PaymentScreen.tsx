@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppText } from '../../components/common/Text';
@@ -21,19 +20,20 @@ import {
   isValidCardNumber,
   type PaymentMethod,
 } from '../../services/api/paymentService';
-import type { RootStackParamList } from '../../navigation/types';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Payment'>;
 
-export function PaymentScreen({ route, navigation }: Props) {
+
+export function PaymentScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const c = theme.colors;
 
-  const plan = PLANS.find((p) => p.id === route.params?.planId) ?? PLANS[0];
+  const { planId } = useLocalSearchParams<{ planId: string }>()
+  const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0]
   const { subtotal, tax, total } = useMemo(() => paymentService.computeTotal(plan.price), [plan.price]);
-
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [holder, setHolder] = useState('');
@@ -55,7 +55,7 @@ export function PaymentScreen({ route, navigation }: Props) {
     Alert.alert(
       t('payment.success'),
       `${t('payment.successBody', { plan: t(`payment.${plan.name}` as const) })}\n${reference}`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }],
+      [{ text: 'OK', onPress: () => router.back() }],
     );
   }
 
@@ -107,7 +107,7 @@ export function PaymentScreen({ route, navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: c.background, paddingTop: insets.top }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 }}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
         <AppText style={{ fontFamily: fonts.heading, fontSize: 17, flex: 1, textAlign: 'center', marginRight: 22 }}>

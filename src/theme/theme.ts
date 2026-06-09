@@ -8,7 +8,7 @@ export interface ThemeColors {
   secondaryMuted: string;
   tertiary: string;
   tertiaryMuted: string;
-
+  info: string;
   // Surfaces
   background: string;
   surface: string;
@@ -70,6 +70,7 @@ export const lightColors: ThemeColors = {
   success: '#0B9972',
   warning: '#D4850A',
   danger: '#C0392B',
+  info: '#185FA5',
   star: '#E0A92E',
   overlay: 'rgba(10,22,40,0.55)',
 };
@@ -100,6 +101,7 @@ export const darkColors: ThemeColors = {
   warning: '#E59B2A',
   danger: '#E5635A',
   star: '#E0A92E',
+  info: '#185FA5',
   overlay: 'rgba(0,0,0,0.6)',
 };
 

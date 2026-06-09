@@ -1,5 +1,8 @@
+import * as WebBrowser from 'expo-web-browser'
+import * as AuthSession from 'expo-auth-session'
+
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/common/Screen';
@@ -12,9 +15,10 @@ import { fonts, radius } from '../../theme/theme';
 
 import { isEmail, isStrongPassword, isNonEmpty } from '../../utils/validators';
 import type { AuthStackParamList } from '../../navigation/types';
-import { useGoogleAuth } from '@/src/hooks/useGoogle';
+// import { useGoogleAuth } from '@/src/hooks/useGoogle';
 import { supabase } from '../../lib/supabase';
 import { router } from 'expo-router'
+WebBrowser.maybeCompleteAuthSession()
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -24,7 +28,7 @@ export function RegisterScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const c = theme.colors;
-const { handleGoogleAuth } = useGoogleAuth()
+
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -108,6 +112,44 @@ async function onSignUp() {
   }
 }
 
+const handleGoogleAuth = async () => {
+  try {
+    await WebBrowser.dismissAuthSession()
+
+const redirectTo = AuthSession.makeRedirectUri({ 
+  scheme: 'propertypulse',
+  path: 'auth/callback'
+})
+
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    })
+
+    if (error || !data.url) {
+      console.log('OAuth error:', error)
+      return
+    }
+console.log('redirectTo:', redirectTo)
+console.log('data.url:', data.url)
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+    console.log('result:', result)
+
+    if (result.type === 'success') {
+      const url = new URL(result.url)
+      const code = url.searchParams.get('code')
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code)
+      }
+    }
+  } catch (e) {
+    console.log('Google auth error:', e)
+  }
+}
   return (
     <Screen padded>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -120,7 +162,7 @@ async function onSignUp() {
             <BrandMark size={26} />
           </View>
 
-          <AppText style={{ fontFamily: fonts.serif, fontSize: 28 }}>{t('auth.createAccount')}</AppText>
+          <AppText style={{ fontFamily: fonts.serif, fontSize: 23 }}>{t('auth.createAccount')}</AppText>
           <AppText color="textMuted" style={{ marginTop: 6, marginBottom: 24 }}>
             {t('auth.createSub')}
           </AppText>

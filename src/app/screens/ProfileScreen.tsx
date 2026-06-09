@@ -38,10 +38,10 @@ export function ProfileScreen() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 20, paddingTop: 28 }}
         showsVerticalScrollIndicator={false}
       >
-        <AppText style={{ fontFamily: fonts.serif, fontSize: 26 }}>
+        <AppText style={{ fontFamily: fonts.serif, fontSize: 21 }}>
           Profile</AppText>
 
         {/* Account card */}

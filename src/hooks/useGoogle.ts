@@ -2,7 +2,6 @@ import * as WebBrowser from 'expo-web-browser'
 import { makeRedirectUri } from 'expo-auth-session'
 import { supabase } from '../lib/supabase'
 
-WebBrowser.maybeCompleteAuthSession()
 
 export function useGoogleAuth() {
   const redirectTo = makeRedirectUri({ scheme: 'propertypulse' })

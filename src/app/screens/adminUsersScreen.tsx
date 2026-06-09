@@ -17,6 +17,15 @@ import type { RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminUsers'>;
 
+// Short labels to prevent wrapping in pill buttons
+const ROLE_SHORT_LABELS: Record<UserRole, string> = {
+  admin:      'Admin',
+  consultant: 'Consult',
+  broker:     'Broker',
+  agent:      'Agent',
+  investor:   'Investor',
+};
+
 export function AdminUsersScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -36,9 +45,7 @@ export function AdminUsersScreen({ navigation }: Props) {
       .listUsers(debounced || undefined)
       .then((list) => alive && setUsers(list))
       .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [debounced]);
 
   async function changeRole(user: UserProfile, role: UserRole) {
@@ -64,7 +71,17 @@ export function AdminUsersScreen({ navigation }: Props) {
     }
   }
 
-  const roleTone = (role: UserRole) => (role === 'admin' ? c.danger : role === 'consultant' ? c.tertiary : c.secondary);
+  // Full color coverage for all 5 roles
+  const roleTone = (role: UserRole): string => {
+    switch (role) {
+      case 'admin':      return c.danger;
+      case 'consultant': return c.tertiary;
+      case 'broker':     return c.info ?? '#185FA5';
+      case 'agent':      return c.secondary;
+      case 'investor':   return c.success ?? '#0F6E56';
+      default:           return c.textMuted;
+    }
+  };
 
   return (
     <Screen>
@@ -72,19 +89,17 @@ export function AdminUsersScreen({ navigation }: Props) {
 
       {/* Search */}
       <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-            backgroundColor: c.surface,
-            borderRadius: radius.md,
-            borderWidth: 1,
-            borderColor: c.border,
-            paddingHorizontal: 14,
-            height: 46,
-          }}
-        >
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          backgroundColor: c.surface,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: c.border,
+          paddingHorizontal: 14,
+          height: 46,
+        }}>
           <Ionicons name="search" size={18} color={c.textMuted} />
           <TextInput
             value={query}
@@ -102,29 +117,53 @@ export function AdminUsersScreen({ navigation }: Props) {
         keyExtractor={(u) => u.id}
         contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 12 }}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={loading ? <InlineLoader /> : <AppText color="textMuted" center style={{ marginTop: 24 }}>—</AppText>}
+        ListEmptyComponent={
+          loading
+            ? <InlineLoader />
+            : <AppText color="textMuted" center style={{ marginTop: 24 }}>No users found</AppText>
+        }
         renderItem={({ item }) => (
-          <View style={{ backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: 14, gap: 12 }}>
+          <View style={{
+            backgroundColor: c.surface,
+            borderRadius: radius.lg,
+            borderWidth: 1,
+            borderColor: c.border,
+            padding: 14,
+            gap: 10,
+          }}>
+            {/* User info row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: `${roleTone(item.role)}22`, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{
+                width: 42, height: 42, borderRadius: 21,
+                backgroundColor: `${roleTone(item.role)}22`,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
                 <AppText style={{ fontFamily: fonts.heading, fontSize: 16, color: roleTone(item.role) }}>
                   {(item.fullName ?? item.email).charAt(0).toUpperCase()}
                 </AppText>
               </View>
-              <View style={{ flex: 1 }}>
-                <AppText style={{ fontFamily: fonts.semibold, fontSize: 14 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText
+                  numberOfLines={1}
+                  style={{ fontFamily: fonts.semibold, fontSize: 14 }}
+                >
                   {item.fullName ?? item.email}
                   {item.id === me?.id ? ' (you)' : ''}
                 </AppText>
-                <AppText variant="caption" color="textMuted">{item.email}</AppText>
+                <AppText numberOfLines={1} variant="caption" color="textMuted">
+                  {item.email}
+                </AppText>
               </View>
-              {savingId === item.id && <Ionicons name="sync" size={16} color={c.textMuted} />}
+              {savingId === item.id && (
+                <Ionicons name="sync" size={16} color={c.textMuted} />
+              )}
             </View>
 
-            {/* Role selector */}
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            {/* Role selector — short labels, smaller padding to prevent wrapping */}
+            <View style={{ flexDirection: 'row', gap: 6 }}>
               {ROLE_ORDER.map((role) => {
                 const active = item.role === role;
+                const tone = roleTone(role);
                 return (
                   <Pressable
                     key={role}
@@ -133,15 +172,21 @@ export function AdminUsersScreen({ navigation }: Props) {
                     style={{
                       flex: 1,
                       alignItems: 'center',
-                      paddingVertical: 8,
+                      paddingVertical: 6,
+                      paddingHorizontal: 2,
                       borderRadius: radius.pill,
                       borderWidth: 1.5,
-                      borderColor: active ? roleTone(role) : c.border,
-                      backgroundColor: active ? `${roleTone(role)}1A` : 'transparent',
+                      borderColor: active ? tone : c.border,
+                      backgroundColor: active ? `${tone}18` : 'transparent',
+                      opacity: savingId === item.id ? 0.5 : 1,
                     }}
                   >
-                    <AppText style={{ fontFamily: fonts.medium, fontSize: 12, color: active ? roleTone(role) : c.textSecondary }}>
-                      {t(`admin.roles.${role}`)}
+                    <AppText style={{
+                      fontFamily: fonts.medium,
+                      fontSize: 11,
+                      color: active ? tone : c.textSecondary,
+                    }}>
+                      {ROLE_SHORT_LABELS[role]}
                     </AppText>
                   </Pressable>
                 );

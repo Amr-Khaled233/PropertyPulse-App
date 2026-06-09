@@ -1,3 +1,6 @@
+import * as WebBrowser from 'expo-web-browser'
+import * as AuthSession from 'expo-auth-session'
+
 import { useState } from 'react';
 import {
   Alert,
@@ -5,8 +8,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -29,9 +30,9 @@ import { isEmail, isStrongPassword } from '../../utils/validators';
 import type { AuthStackParamList } from '../../navigation/types';
 
 import { supabase } from '../../lib/supabase';
-import { useGoogleAuth } from '@/src/hooks/useGoogle';
 import { router } from 'expo-router'
 
+WebBrowser.maybeCompleteAuthSession()
 
 type Props = NativeStackScreenProps<
   AuthStackParamList,
@@ -43,7 +44,6 @@ export function LoginScreen({
 }: Props) {
   const { theme } = useTheme();
   const { t } = useTranslation();
-const { handleGoogleAuth } = useGoogleAuth()
 
   const [email, setEmail] = useState('');
   const [password, setPassword] =
@@ -56,8 +56,8 @@ const { handleGoogleAuth } = useGoogleAuth()
   const [loading, setLoading] =
     useState(false);
 
-  const [googleLoading, setGoogleLoading] =
-    useState(false);
+  // const [googleLoading, setGoogleLoading] =
+  //   useState(false);
 
   async function onSignIn() {
     setError(null);
@@ -123,24 +123,39 @@ const { handleGoogleAuth } = useGoogleAuth()
     );
   }
 
-  async function onGoogle() {
-    setError(null);
+const handleGoogleAuth = async () => {
+  try {
+    await WebBrowser.dismissAuthSession()
 
-    setGoogleLoading(true);
+    const redirectTo = AuthSession.makeRedirectUri({ scheme: 'propertypulse' })
 
-    try {
-      // your google auth logic here
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    })
 
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : t('common.error')
-      );
-    } finally {
-      setGoogleLoading(false);
+    if (error || !data.url) {
+      console.log('OAuth error:', error)
+      return
     }
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+    console.log('result:', result)
+
+    if (result.type === 'success') {
+      const url = new URL(result.url)
+      const code = url.searchParams.get('code')
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code)
+      }
+    }
+  } catch (e) {
+    console.log('Google auth error:', e)
   }
+}
 
   return (
     <Screen padded>
@@ -279,7 +294,7 @@ const { handleGoogleAuth } = useGoogleAuth()
               )}
               variant="google"
               onPress={handleGoogleAuth}
-              loading={googleLoading}
+              // loading={googleLoading}
             />
           </View>
 
