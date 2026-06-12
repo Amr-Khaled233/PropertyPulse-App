@@ -1,77 +1,64 @@
+// Domain types for properties — mirrors the backend contract
+// (PropertyPulse shared-types). The mobile app consumes the SAME API as the web
+// app, so field names are camelCase DTOs (NOT Supabase snake_case columns).
+
+export type PropertyType = 'apartment' | 'house' | 'villa' | 'townhouse' | 'commercial' | 'land';
+
+export type ListingStatus = 'for_sale' | 'for_rent' | 'sold' | 'off_market';
+
+export interface GeoLocation {
+  lat: number;
+  lng: number;
+}
+
+export interface Address {
+  line1: string;
+  city: string;
+  state?: string; // district / town
+  country: string;
+  postalCode?: string;
+}
+
 export interface Property {
-  listing_id: string;
-  property_type?: string;
-  offering_type?: string;
-  completion_status?: string;
-  title?: string;
-  price_egp?: number;
-  city?: string;
-  town?: string;
-  district?: string;
-  lat?: number;
-  lon?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  area_value?: number;
-  furnished?: string;
-  amenities?: string;
-  is_verified?: boolean;
-  is_premium?: boolean;
-  payment_method?: string;
-  images_count?: number;
-  detail_url?: string;
-  agent_name?: string;
-  contact_phone?: string;
-  contact_whatsapp?: string;
-  // extended columns
-  internal_id?: number;
-  category?: string;
-  listing_type?: string;
-  price_period?: string;
-  price_currency?: string;
-  location_full?: string;
-  subdistrict?: string;
-  area_unit?: string;
-  listing_level?: string;
-  is_featured?: boolean;
-  is_new_construction?: boolean;
-  is_direct_from_dev?: boolean;
-  is_exclusive?: boolean;
-  listed_date?: string;
-  has_view_360?: boolean;
-  video_url?: string;
-  reference?: string;
-  rera?: string;
+  id: string;
+  title: string;
+  type: PropertyType;
+  status: ListingStatus;
+  price: number;
+  currency: string;
+  areaSqm: number;
+  bedrooms: number;
+  bathrooms: number;
+  yearBuilt?: number;
+  address: Address;
+  location?: GeoLocation;
+  images: string[];
   description?: string;
-  agent_id?: number;
-  agent_email?: string;
-  agent_is_super?: boolean;
-  agent_languages?: string;
-  broker_id?: number;
-  broker_name?: string;
-  broker_email?: string;
-  broker_phone?: string;
-  contact_email?: string;
-  scraped_at?: string;
+  source?: string;
+  /** Admin moderation / merchandising fields. */
+  featured?: boolean;
+  approved?: boolean;
+  agentName?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface SearchParams {
-  search?: string;
+/** Filters bound to the property search UI (query string for GET /properties). */
+export interface PropertySearchParams {
   city?: string;
   district?: string;
-  offering_type?: 'for_sale' | 'for_rent';
-  property_type?: string;
-  completion_status?: string;
-  price_min?: number;
-  price_max?: number;
-  bedrooms_min?: number;
-  bathrooms_min?: number;
-  limit?: number;
-  offset?: number;
+  type?: PropertyType;
+  minPrice?: number;
+  maxPrice?: number;
+  bedrooms?: number;
+  page?: number;
+  pageSize?: number;
 }
 
-export interface ListingsResponse {
-  data: Property[];
+/** Unwrapped page result returned by propertyService.search. */
+export interface PropertyPage {
+  items: Property[];
+  page: number;
+  pageSize: number;
   total: number;
-  hasMore: boolean;
 }

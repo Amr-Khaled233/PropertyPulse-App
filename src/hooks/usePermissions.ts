@@ -1,4 +1,4 @@
-import { can, type Permission, type UserRole } from '@propertypulse/shared-types';
+import { can, type Permission, type UserRole } from '../types/user';
 import { useAuthStore } from '../store/authStore';
 
 export function usePermissions() {

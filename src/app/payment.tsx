@@ -1,1 +1,0 @@
-export { PaymentScreen as default } from './screens/PaymentScreen';       

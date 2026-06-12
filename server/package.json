@@ -1,0 +1,22 @@
+{
+  "name": "propertypulse-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-contained PropertyPulse backend (Express + Supabase + Gemini + Stripe) for the mobile app.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/server",
+    "build": "npm run build --workspace apps/server",
+    "start": "npm run start --workspace apps/server",
+    "typecheck": "npm run typecheck --workspace apps/server",
+    "ingest": "npm run ingest --workspace apps/server",
+    "import:properties": "npm run import:properties --workspace apps/server",
+    "make:admin": "npm run make:admin --workspace apps/server"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

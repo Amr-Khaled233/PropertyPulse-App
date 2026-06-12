@@ -1,4 +1,4 @@
-import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
+import { Text as RNText, StyleSheet, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { typography } from '../../theme/theme';
 
@@ -14,15 +14,24 @@ export interface AppTextProps extends RNTextProps {
 
 export function AppText({ variant = 'body', color = 'text', center, style, ...rest }: AppTextProps) {
   const { theme } = useTheme();
-  return (
-    <RNText
-      {...rest}
-      style={[
-        typography[variant],
-        { color: theme.colors[color] },
-        center && { textAlign: 'center' },
-        style as TextStyle,
-      ]}
-    />
-  );
+
+  const flat = StyleSheet.flatten([
+    typography[variant],
+    { color: theme.colors[color] },
+    center && { textAlign: 'center' as const },
+    style,
+  ]) as TextStyle;
+
+  // Android clips tall serif (Newsreader) glyphs when no lineHeight is set, which
+  // chops the tops/bottoms off big headings. Give any serif text a safe line box.
+  if (
+    typeof flat.fontFamily === 'string' &&
+    flat.fontFamily.includes('Newsreader') &&
+    typeof flat.fontSize === 'number' &&
+    flat.lineHeight == null
+  ) {
+    flat.lineHeight = Math.round(flat.fontSize * 1.32);
+  }
+
+  return <RNText {...rest} style={flat} />;
 }

@@ -36,3 +36,25 @@ export function formatSigned(value: number, currency = 'EGP'): string {
   const sign = value > 0 ? '+' : value < 0 ? '-' : '';
   return `${sign}${Math.abs(value).toLocaleString()} ${currency}`;
 }
+
+/** Compact currency with the code suffix, e.g. "9.3M EGP" / "850k EGP". */
+export function formatCompactCurrency(value: number, currency = 'EGP'): string {
+  return formatCompact(value, currency);
+}
+
+/** "3 bed · 2 bath · 120 m²" style summary line. */
+export function formatPropertySpecs(bedrooms: number, bathrooms: number, areaSqm: number): string {
+  return `${bedrooms} bed · ${bathrooms} bath · ${areaSqm.toLocaleString()} m²`;
+}
+
+/** Years value that may be Infinity / null (never breaks even). */
+export function formatYears(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return `${value.toFixed(1)} yrs`;
+}
+
+/** Whole-number percent, e.g. 7.4 → "7.4%". */
+export function formatPct(value: number, digits = 1): string {
+  if (!Number.isFinite(value)) return '—';
+  return `${value.toFixed(digits)}%`;
+}

@@ -1,54 +1,43 @@
+// Auth — backend email/password (/auth/*) + Google OAuth via Supabase.
+// The backend returns { user, accessToken, refreshToken }; we persist the token
+// via tokenStore (SecureStore) and the apiClient attaches it to every request.
+
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
-import type { Session } from '@supabase/supabase-js';
-import type { UserProfile } from '@propertypulse/shared-types';
+import { apiClient } from './apiClient';
+import { tokenStore } from './tokenStore';
 import { requireSupabase, supabase } from '../supabase/supabaseClient';
+import type { UserProfile } from '../../types/user';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export interface Credentials {
-  email: string;
-  password: string;
-}
-
-function rowToProfile(row: Record<string, unknown>): UserProfile {
-  return {
-    id: String(row.id),
-    email: String(row.email ?? ''),
-    fullName: (row.full_name as string) ?? undefined,
-    role: (row.role as UserProfile['role']) ?? 'investor',
-    avatarUrl: (row.avatar_url as string) ?? undefined,
-    createdAt: String(row.created_at ?? new Date().toISOString()),
-  };
+export interface AuthResult {
+  user: UserProfile;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export const authService = {
-  async signInWithEmail({ email, password }: Credentials): Promise<Session> {
-    const sb = requireSupabase();
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error || !data.session) throw new Error(error?.message ?? 'Invalid credentials');
-    return data.session;
+  async login(email: string, password: string): Promise<UserProfile> {
+    const { data } = await apiClient.post<AuthResult>('/auth/login', { email, password });
+    await tokenStore.set(data.accessToken, data.refreshToken);
+    return data.user;
   },
 
-  async signUpWithEmail(
-    email: string,
-    password: string,
-    fullName: string,
-  ): Promise<{ session: Session | null; needsConfirmation: boolean }> {
-    const sb = requireSupabase();
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (error) throw new Error(error.message);
-    return { session: data.session, needsConfirmation: !data.session };
+  async register(fullName: string, email: string, password: string): Promise<UserProfile> {
+    // Backend register returns the profile only; sign in afterwards for a token.
+    await apiClient.post<UserProfile>('/auth/register', { email, password, fullName });
+    return this.login(email, password);
   },
 
-  async signInWithGoogle(): Promise<Session> {
+  async me(): Promise<UserProfile> {
+    const { data } = await apiClient.get<UserProfile>('/auth/me');
+    return data;
+  },
+
+  async signInWithGoogle(): Promise<UserProfile> {
     const sb = requireSupabase();
     const redirectTo = makeRedirectUri({ scheme: 'propertypulse', path: 'auth-callback' });
-
     const { data, error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: true },
@@ -59,56 +48,44 @@ export const authService = {
     if (result.type !== 'success') throw new Error('Google sign-in was cancelled');
 
     const url = new URL(result.url);
-    const params = new URLSearchParams(url.hash ? url.hash.slice(1) : url.search.slice(1));
     const code = url.searchParams.get('code');
+    const hash = new URLSearchParams(url.hash ? url.hash.slice(1) : '');
 
+    let session = null;
     if (code) {
       const { data: ex, error: exErr } = await sb.auth.exchangeCodeForSession(code);
       if (exErr || !ex.session) throw new Error(exErr?.message ?? 'Google sign-in failed');
-      return ex.session;
+      session = ex.session;
+    } else {
+      const access_token = hash.get('access_token');
+      const refresh_token = hash.get('refresh_token');
+      if (!access_token || !refresh_token) throw new Error('No session returned from Google');
+      const { data: setData, error: setErr } = await sb.auth.setSession({ access_token, refresh_token });
+      if (setErr || !setData.session) throw new Error(setErr?.message ?? 'Google sign-in failed');
+      session = setData.session;
     }
 
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-    if (!access_token || !refresh_token) throw new Error('No session returned from Google');
-
-    const { data: setData, error: setErr } = await sb.auth.setSession({ access_token, refresh_token });
-    if (setErr || !setData.session) throw new Error(setErr?.message ?? 'Google sign-in failed');
-    return setData.session;
-  },
-
-  async signOut(): Promise<void> {
-    if (supabase) await supabase.auth.signOut();
+    // Use the Supabase token as the backend Bearer, then load the profile.
+    await tokenStore.set(session.access_token, session.refresh_token);
+    return this.me();
   },
 
   async resetPassword(email: string): Promise<void> {
-    if (!supabase) return; // demo mode — no-op
+    if (!supabase) return;
     await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'propertypulse://auth-callback' });
   },
 
-  async getSession(): Promise<Session | null> {
-    if (!supabase) return null;
-    const { data } = await supabase.auth.getSession();
-    return data.session;
+  async signOut(): Promise<void> {
+    await tokenStore.clear();
+    if (supabase) await supabase.auth.signOut();
   },
 
-  /** Fetch the profile row for a user (auto-created by a DB trigger). */
-  async fetchProfile(userId: string): Promise<UserProfile | null> {
-    const sb = requireSupabase();
-    const { data, error } = await sb.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (error) throw new Error(error.message);
-    return data ? rowToProfile(data as Record<string, unknown>) : null;
-  },
-
-  async updateProfile(userId: string, patch: { fullName?: string; avatarUrl?: string }): Promise<UserProfile> {
-    const sb = requireSupabase();
-    const { data, error } = await sb
-      .from('profiles')
-      .update({ full_name: patch.fullName, avatar_url: patch.avatarUrl })
-      .eq('id', userId)
-      .select('*')
-      .single();
-    if (error) throw new Error(error.message);
-    return rowToProfile(data as Record<string, unknown>);
+  async hasSession(): Promise<boolean> {
+    if (await tokenStore.getAccess()) return true;
+    if (supabase) {
+      const { data } = await supabase.auth.getSession();
+      return Boolean(data.session);
+    }
+    return false;
   },
 };
