@@ -21,6 +21,11 @@ export const authService = {
   async login(email: string, password: string): Promise<UserProfile> {
     const { data } = await apiClient.post<AuthResult>('/auth/login', { email, password });
     await tokenStore.set(data.accessToken, data.refreshToken);
+    // Register the session with the Supabase client so it can auto-refresh
+    // the access token before the 1-hour expiry.
+    if (supabase) {
+      await supabase.auth.setSession({ access_token: data.accessToken, refresh_token: data.refreshToken });
+    }
     return data.user;
   },
 

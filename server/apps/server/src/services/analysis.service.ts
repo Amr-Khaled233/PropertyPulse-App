@@ -11,9 +11,8 @@ import { geminiClient } from '../ai/llm/geminiClient.js';
 import { ApiError } from '../utils/apiError.js';
 import { logger } from '../utils/logger.js';
 
-/** Free plan: how many AI comparisons per month. Paid plans are unlimited.
- *  Raised for development/demo so AI compare isn't blocked while testing. */
-const FREE_COMPARE_LIMIT = 100;
+/** Free plan: how many AI comparisons per month. Paid plans are unlimited. */
+const FREE_COMPARE_LIMIT = 1;
 function startOfMonthISO(): string {
   const n = new Date();
   return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1)).toISOString();

@@ -44,12 +44,12 @@ export const paymentService = {
   },
 
   /** Create a Stripe Checkout Session and return its URL (or signal fallback). */
-  async createCheckout(userId: string, plan: PlanTier): Promise<{ url: string | null; simulated: boolean }> {
+  async createCheckout(userId: string, plan: PlanTier): Promise<{ url: string | null; simulated: boolean; sessionId: string | null }> {
     assertPlan(plan);
     const amount = PLAN_PRICE_EGP[plan];
     // Free plan or no Stripe configured → simulate (caller upgrades directly).
     if (plan === 'free' || amount <= 0 || !stripe) {
-      return { url: null, simulated: true };
+      return { url: null, simulated: true, sessionId: null };
     }
 
     const base = env.CORS_ORIGIN;
@@ -69,7 +69,7 @@ export const paymentService = {
       success_url: `${base}/pricing?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/pricing?canceled=1`,
     });
-    return { url: session.url, simulated: false };
+    return { url: session.url, simulated: false, sessionId: session.id };
   },
 
   /** Verify a completed Checkout Session and apply the plan to the user. */

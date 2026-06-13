@@ -25,8 +25,8 @@ export interface SubscribeResult {
 export const paymentService = {
   /** Start a Stripe Checkout Session. Returns a redirect URL, or simulated=true
    *  when Stripe isn't configured (caller then upgrades directly). */
-  async startCheckout(plan: PlanId): Promise<{ url: string | null; simulated: boolean }> {
-    const { data } = await apiClient.post<{ url: string | null; simulated: boolean }>('/payments/checkout', { plan });
+  async startCheckout(plan: PlanId): Promise<{ url: string | null; simulated: boolean; sessionId: string | null }> {
+    const { data } = await apiClient.post<{ url: string | null; simulated: boolean; sessionId: string | null }>('/payments/checkout', { plan });
     return data;
   },
 

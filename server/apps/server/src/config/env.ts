@@ -14,6 +14,9 @@ const schema = z.object({
   GEMINI_EMBEDDING_MODEL: z.string().default('text-embedding-004'),
   // Optional — when set, real Stripe Checkout is used; otherwise the gateway is simulated.
   STRIPE_SECRET_KEY: z.string().optional(),
+  // Optional — Supabase project JWT secret (Project Settings → API → JWT Secret).
+  // When provided, tokens are verified locally (no network call). Strongly recommended.
+  SUPABASE_JWT_SECRET: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);

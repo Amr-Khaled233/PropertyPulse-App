@@ -13,7 +13,7 @@ export const reportService = {
     assumptions: Partial<FinancialAssumptions> = {},
     lang: 'en' | 'ar' = 'en',
   ): Promise<InvestmentReport> {
-    const { data } = await apiClient.post<InvestmentReport>('/reports', { propertyId, assumptions, lang });
+    const { data } = await apiClient.post<InvestmentReport>('/reports', { propertyId, assumptions, lang }, 90_000);
     return data;
   },
 

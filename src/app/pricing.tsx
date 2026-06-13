@@ -31,7 +31,7 @@ interface Plan {
 }
 
 const PLANS: Plan[] = [
-  { id: 'free', tier: 'Base', name: 'Free', price: 0, cadence: 'Forever free', features: ['Basic search', '3 AI reports / month', 'Limited market data'] },
+  { id: 'free', tier: 'Base', name: 'Free', price: 0, cadence: 'Forever free', features: ['Basic search', '2 AI reports / month', '1 AI comparison / month', 'Limited market data'] },
   { id: 'pro', tier: 'Elevate', name: 'Pro', price: 850, cadence: 'per month', popular: true, features: ['Unlimited AI reports', 'Full AI advisor', 'Real-time trends', 'Portfolio tools'] },
   { id: 'enterprise', tier: 'Scale', name: 'Enterprise', price: 2400, cadence: 'per month', features: ['Team collaboration', 'API access', 'Custom AI engine', 'Priority manager'] },
 ];
@@ -57,15 +57,30 @@ export default function PricingScreen() {
     setProcessing(true);
     try {
       const checkout = await paymentService.startCheckout(selected.id);
-      if (checkout.url) {
-        // Open Stripe Checkout; finalize on return (test mode).
-        await WebBrowser.openBrowserAsync(checkout.url);
+
+      if (checkout.simulated || !checkout.url || !checkout.sessionId) {
+        // No Stripe configured (demo / free plan) → upgrade directly.
+        const res = await paymentService.subscribe({ plan: selected.id, amount: total, currency: CURRENCY });
+        if (user) setUser({ ...user, plan: res.plan ?? selected.id });
+        Alert.alert(t('pricing.successTitle'), t('pricing.successBody', { plan: selected.name }));
+        return;
       }
-      const res = await paymentService.subscribe({ plan: selected.id, amount: total, currency: CURRENCY });
+
+      // Real Stripe: open checkout, then verify the session server-side.
+      await WebBrowser.openBrowserAsync(checkout.url);
+
+      // confirmCheckout checks session.payment_status === 'paid' on Stripe.
+      // It throws if the user cancelled or didn't complete payment.
+      const res = await paymentService.confirm(checkout.sessionId);
       if (user) setUser({ ...user, plan: res.plan ?? selected.id });
       Alert.alert(t('pricing.successTitle'), t('pricing.successBody', { plan: selected.name }));
     } catch (e) {
-      Alert.alert(t('pricing.failedTitle'), e instanceof Error ? e.message : t('pricing.failedBody'));
+      const msg = e instanceof Error ? e.message : '';
+      if (msg === 'Payment not completed') {
+        // User cancelled or closed Stripe without paying — no error shown.
+        return;
+      }
+      Alert.alert(t('pricing.failedTitle'), msg || t('pricing.failedBody'));
     } finally {
       setProcessing(false);
     }

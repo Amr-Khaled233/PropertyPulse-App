@@ -22,15 +22,16 @@ export function AppText({ variant = 'body', color = 'text', center, style, ...re
     style,
   ]) as TextStyle;
 
-  // Android clips tall serif (Newsreader) glyphs when no lineHeight is set, which
-  // chops the tops/bottoms off big headings. Give any serif text a safe line box.
+  // When an inline style overrides fontFamily/fontSize but not lineHeight, the
+  // base typography lineHeight (e.g. 21 from `body`) stays, producing a line box
+  // smaller than the font — the top/bottom of glyphs get clipped. Fix whenever
+  // the current lineHeight is insufficient for the current fontSize.
   if (
-    typeof flat.fontFamily === 'string' &&
-    flat.fontFamily.includes('Newsreader') &&
     typeof flat.fontSize === 'number' &&
-    flat.lineHeight == null
+    (flat.lineHeight == null || (typeof flat.lineHeight === 'number' && flat.lineHeight < flat.fontSize * 1.2))
   ) {
-    flat.lineHeight = Math.round(flat.fontSize * 1.32);
+    const isSerif = typeof flat.fontFamily === 'string' && flat.fontFamily.includes('Newsreader');
+    flat.lineHeight = Math.round(flat.fontSize * (isSerif ? 1.32 : 1.2));
   }
 
   return <RNText {...rest} style={flat} />;

@@ -51,12 +51,12 @@ export const analysisService = {
   },
 
   async compare(propertyIds: string[], lang: 'en' | 'ar' = 'en'): Promise<ComparisonResult> {
-    const { data } = await apiClient.post<ComparisonResult>('/analysis/compare', { propertyIds, lang });
+    const { data } = await apiClient.post<ComparisonResult>('/analysis/compare', { propertyIds, lang }, 90_000);
     return data;
   },
 
   async negotiation(propertyId: string, lang: 'en' | 'ar' = 'en'): Promise<NegotiationResult> {
-    const { data } = await apiClient.post<NegotiationResult>('/analysis/negotiation', { propertyId, lang });
+    const { data } = await apiClient.post<NegotiationResult>('/analysis/negotiation', { propertyId, lang }, 90_000);
     return data;
   },
 };

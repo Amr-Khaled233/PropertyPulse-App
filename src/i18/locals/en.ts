@@ -167,6 +167,9 @@ export const en = {
     sources: 'Sources',
     generating: 'Generating your report…',
     generatingBody: 'Our multi-agent AI is analyzing the market, comps and risk.',
+    limitTitle: 'Monthly limit reached',
+    limitBody: 'Free plan includes 2 AI reports per month. Upgrade to Pro for unlimited reports.',
+    upgrade: 'Upgrade to Pro',
   },
   portfolio: {
     title: 'Your Portfolio',
@@ -184,7 +187,9 @@ export const en = {
     analyzing: 'Comparing properties…',
     verdict: 'AI VERDICT',
     pricePerSqm: 'Price / m²',
-    upgrade: 'Upgrade plan',
+    upgrade: 'Upgrade to Pro',
+    limitTitle: 'Monthly limit reached',
+    limitBody: 'Free plan includes 1 AI comparison per month. Upgrade to Pro for unlimited comparisons.',
   },
   pricing: {
     title: 'Plans & Pricing',

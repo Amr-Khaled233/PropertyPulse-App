@@ -16,24 +16,45 @@ const instance: AxiosInstance = axios.create({
 });
 
 instance.interceptors.request.use(async (config) => {
-  let token = await tokenStore.getAccess();
-  if (!token && supabase) {
+  let token: string | null = null;
+
+  // Prefer the live Supabase session — getSession() always returns a valid,
+  // auto-refreshed token when a session exists, so the stored token never
+  // gets sent stale after the 1-hour Supabase expiry.
+  if (supabase) {
     const { data } = await supabase.auth.getSession();
     token = data.session?.access_token ?? null;
   }
+
+  // Fall back to tokenStore for sessions not tracked by the Supabase client.
+  if (!token) token = await tokenStore.getAccess();
+
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Surface the backend's friendly error message (e.g. "Free plan is limited to N
-// AI reports per month…") instead of Axios's generic "Request failed with status
-// code 4xx". Without this, every failed request shows the raw status text.
+// Surface the backend's friendly error message. On 401, attempt a token refresh
+// and retry once before giving up — handles tokens that expired mid-session.
 instance.interceptors.response.use(
   (res) => res,
-  (error) => {
+  async (error) => {
+    const original = error.config as typeof error.config & { _retry?: boolean };
+    if (error.response?.status === 401 && !original._retry && supabase) {
+      original._retry = true;
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (refreshed.session) {
+        const { access_token, refresh_token } = refreshed.session;
+        await tokenStore.set(access_token, refresh_token ?? '');
+        original.headers.Authorization = `Bearer ${access_token}`;
+        return instance(original);
+      }
+      // Refresh failed — clear stored tokens so the auth gate redirects to login.
+      await tokenStore.clear();
+      await supabase.auth.signOut();
+    }
     const data = error?.response?.data as ApiResponse<unknown> | undefined;
     const message = data?.error?.message ?? error?.message ?? 'Network request failed';
-    return Promise.reject(new Error(message));
+    return Promise.reject(makeError(message, data?.error?.code));
   },
 );
 
@@ -43,11 +64,17 @@ export interface RequestMeta {
   total?: number;
 }
 
+function makeError(message: string, code?: string): Error {
+  const err = new Error(message);
+  if (code) (err as Error & { code: string }).code = code;
+  return err;
+}
+
 async function unwrap<T>(p: Promise<{ data: ApiResponse<T> }>): Promise<{ data: T; meta?: RequestMeta }> {
   const res = await p;
   const body = res.data;
   if (!body.success || body.data === undefined) {
-    throw new Error(body.error?.message ?? 'Request failed');
+    throw makeError(body.error?.message ?? 'Request failed', body.error?.code);
   }
   return { data: body.data, meta: body.meta as RequestMeta | undefined };
 }
@@ -56,8 +83,8 @@ export const apiClient = {
   async get<T>(url: string, params?: Record<string, unknown>) {
     return unwrap<T>(instance.get<ApiResponse<T>>(url, { params }));
   },
-  async post<T>(url: string, data?: unknown) {
-    return unwrap<T>(instance.post<ApiResponse<T>>(url, data));
+  async post<T>(url: string, data?: unknown, timeout?: number) {
+    return unwrap<T>(instance.post<ApiResponse<T>>(url, data, timeout ? { timeout } : undefined));
   },
   async put<T>(url: string, data?: unknown) {
     return unwrap<T>(instance.put<ApiResponse<T>>(url, data));

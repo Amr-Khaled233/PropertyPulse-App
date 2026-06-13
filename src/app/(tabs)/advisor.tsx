@@ -1,7 +1,7 @@
 // AI Advisor — RAG chat (POST /chat). Mirrors the web AdvisorPanel.
 
-import { useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/common/Screen';
@@ -112,6 +112,35 @@ export default function AdvisorScreen() {
   );
 }
 
+function TypingDots({ color }: { color: string }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const bounce = (v: Animated.Value) =>
+      Animated.sequence([
+        Animated.timing(v, { toValue: -5, duration: 280, useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: 280, useNativeDriver: true }),
+      ]);
+    const loop = Animated.loop(Animated.stagger(120, [bounce(dot1), bounce(dot2), bounce(dot3)]));
+    loop.start();
+    return () => loop.stop();
+  }, [dot1, dot2, dot3]);
+
+  const renderDot = (v: Animated.Value) => (
+    <Animated.View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: color, transform: [{ translateY: v }] }} />
+  );
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 5, paddingVertical: 3, alignItems: 'center', height: 22 }}>
+      {renderDot(dot1)}
+      {renderDot(dot2)}
+      {renderDot(dot3)}
+    </View>
+  );
+}
+
 function Bubble({ msg, c }: { msg: Msg; c: { secondary: string; surface: string; border: string; text: string; textMuted: string; secondaryMuted: string } }) {
   const isUser = msg.role === 'user';
   return (
@@ -128,7 +157,7 @@ function Bubble({ msg, c }: { msg: Msg; c: { secondary: string; surface: string;
         }}
       >
         {msg.pending ? (
-          <AppText style={{ color: c.textMuted }}>…</AppText>
+          <TypingDots color={c.textMuted} />
         ) : isUser ? (
           <AppText style={{ color: '#fff', lineHeight: 21 }}>{msg.content}</AppText>
         ) : (

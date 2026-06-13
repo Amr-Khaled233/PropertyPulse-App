@@ -169,6 +169,9 @@ export const ar: TranslationSchema = {
     sources: 'المصادر',
     generating: 'جارٍ إنشاء تقريرك…',
     generatingBody: 'يقوم الذكاء الاصطناعي بتحليل السوق والمقارنات والمخاطر.',
+    limitTitle: 'تم بلوغ الحد الشهري',
+    limitBody: 'تشمل الباقة المجانية تقريرَين ذكيَّين شهريًّا. ارتقِ إلى Pro للحصول على تقارير غير محدودة.',
+    upgrade: 'الترقية إلى Pro',
   },
   portfolio: {
     title: 'محفظتك',
@@ -186,7 +189,9 @@ export const ar: TranslationSchema = {
     analyzing: 'جارٍ مقارنة العقارات…',
     verdict: 'حكم الذكاء الاصطناعي',
     pricePerSqm: 'سعر المتر',
-    upgrade: 'ترقية الباقة',
+    upgrade: 'الترقية إلى Pro',
+    limitTitle: 'تم بلوغ الحد الشهري',
+    limitBody: 'تشمل الباقة المجانية مقارنةً واحدةً شهريًّا. ارتقِ إلى Pro للحصول على مقارنات غير محدودة.',
   },
   pricing: {
     title: 'الباقات والأسعار',

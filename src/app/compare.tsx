@@ -11,12 +11,23 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { ScreenHeader } from '../components/common/Brand';
+import { AiLoader } from '../components/common/AiLoader';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts, radius } from '../theme/theme';
 import { useUiStore } from '../store/uiStore';
 import { analysisService, type ComparisonResult } from '../services/api/analysisService';
 import { formatCompactCurrency, formatPct } from '../utils/formatters';
 import { displayTitle } from '../utils/propertyTitle';
+
+function cleanText(text: string, candidates: ComparisonCandidate[]): string {
+  let t = text;
+  for (const cand of candidates) {
+    const title = displayTitle(cand.property);
+    t = t.replace(new RegExp(`\\(ID:\\s*${cand.property.id}\\)`, 'g'), '');
+    t = t.replace(new RegExp(cand.property.id, 'g'), title);
+  }
+  return t.replace(/\s{2,}/g, ' ').trim();
+}
 
 export default function CompareScreen() {
   const { ids } = useLocalSearchParams<{ ids: string }>();
@@ -28,7 +39,7 @@ export default function CompareScreen() {
 
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; isLimit: boolean } | null>(null);
 
   const propertyIds = (ids ?? '').split(',').filter(Boolean);
 
@@ -38,7 +49,8 @@ export default function CompareScreen() {
     try {
       setResult(await analysisService.compare(propertyIds, lang));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      const isLimit = (e as { code?: string }).code === 'COMPARE_LIMIT_REACHED';
+      setError({ message: e instanceof Error ? e.message : t('common.error'), isLimit });
     } finally {
       setLoading(false);
     }
@@ -53,22 +65,28 @@ export default function CompareScreen() {
       <ScreenHeader title={t('compare.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         {loading ? (
-          <View style={{ alignItems: 'center', paddingVertical: 56, gap: 14 }}>
-            <Ionicons name="sparkles" size={40} color={c.secondary} />
-            <AppText style={{ fontFamily: fonts.serif, fontSize: 18 }} center>{t('compare.analyzing')}</AppText>
-          </View>
+          <AiLoader title={t('compare.analyzing')} />
         ) : error ? (
           <View style={{ alignItems: 'center', paddingVertical: 48, gap: 14 }}>
-            <Ionicons name="lock-closed-outline" size={40} color={c.tertiary} />
-            <AppText color="textMuted" center>{error}</AppText>
-            <Button label={t('compare.upgrade')} onPress={() => router.push('/pricing')} fullWidth={false} />
-            <Button label={t('common.retry')} variant="outlined" onPress={run} fullWidth={false} />
+            <Ionicons name={error.isLimit ? 'lock-closed-outline' : 'alert-circle-outline'} size={40} color={error.isLimit ? c.tertiary : c.danger} />
+            {error.isLimit && (
+              <AppText style={{ fontFamily: fonts.serif, fontSize: 18 }} center>{t('compare.limitTitle')}</AppText>
+            )}
+            <AppText color="textMuted" center>{error.isLimit ? t('compare.limitBody') : error.message}</AppText>
+            {error.isLimit ? (
+              <>
+                <Button label={t('compare.upgrade')} onPress={() => router.push('/pricing')} fullWidth={false} />
+                <Button label={t('common.back')} variant="outlined" onPress={() => router.back()} fullWidth={false} />
+              </>
+            ) : (
+              <Button label={t('common.retry')} variant="outlined" onPress={run} fullWidth={false} />
+            )}
           </View>
         ) : result ? (
           <>
             <Card tone="inverse">
               <AppText variant="label" style={{ color: c.textOnInverse, opacity: 0.7 }}>{t('compare.verdict')}</AppText>
-              <AppText style={{ color: c.textOnInverse, marginTop: 6, lineHeight: 22 }}>{result.verdict}</AppText>
+              <AppText style={{ color: c.textOnInverse, marginTop: 6, lineHeight: 22 }}>{cleanText(result.verdict, result.candidates)}</AppText>
             </Card>
 
             {[...result.candidates]
@@ -99,7 +117,7 @@ export default function CompareScreen() {
                     </View>
                     {result.ranking?.find((r) => r.propertyId === cand.property.id)?.rationale && (
                       <AppText variant="caption" color="textMuted" style={{ marginTop: 10 }}>
-                        {result.ranking.find((r) => r.propertyId === cand.property.id)?.rationale}
+                        {cleanText(result.ranking.find((r) => r.propertyId === cand.property.id)!.rationale, result.candidates)}
                       </AppText>
                     )}
                   </Card>

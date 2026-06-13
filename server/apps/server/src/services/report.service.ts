@@ -8,9 +8,8 @@ import { userRepository } from '../repositories/user.repository.js';
 import { ApiError } from '../utils/apiError.js';
 import type { AssumptionOverrides } from '../ai/agents/calculationAgent.js';
 
-/** Free plan allowance — paid plans (pro/enterprise) are unlimited.
- *  Raised for development/demo so AI reports aren't blocked while testing. */
-const FREE_MONTHLY_REPORTS = 100;
+/** Free plan allowance — paid plans (pro/enterprise) are unlimited. */
+const FREE_MONTHLY_REPORTS = 2;
 
 function startOfMonthISO(): string {
   const now = new Date();

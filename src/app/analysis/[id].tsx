@@ -12,6 +12,7 @@ import { Button } from '../../components/common/Button';
 import { Chip } from '../../components/common/Chip';
 import { ScreenHeader } from '../../components/common/Brand';
 import { InlineLoader } from '../../components/common/Loader';
+import { AiLoader } from '../../components/common/AiLoader';
 import { ReportView } from '../../components/analysis/ReportView';
 import { useTheme } from '../../theme/ThemeProvider';
 import { fonts, radius } from '../../theme/theme';
@@ -89,7 +90,7 @@ export default function AnalysisScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         {tab === 'report' && (
           reportLoading ? (
-            <Loading c={c} title={t('report.generating')} body={t('report.generatingBody')} />
+            <AiLoader title={t('report.generating')} body={t('report.generatingBody')} />
           ) : report ? (
             <ReportView report={report} />
           ) : (
@@ -106,7 +107,7 @@ export default function AnalysisScreen() {
 
         {tab === 'negotiation' && (
           negoLoading ? (
-            <InlineLoader />
+            <AiLoader title={t('analysis.negoTitle')} compact />
           ) : nego ? (
             <NegotiationView nego={nego} c={c} t={t} />
           ) : (
@@ -125,16 +126,6 @@ export default function AnalysisScreen() {
         {tab === 'financing' && !property && <InlineLoader />}
       </ScrollView>
     </Screen>
-  );
-}
-
-function Loading({ c, title, body }: { c: { secondary: string }; title: string; body: string }) {
-  return (
-    <View style={{ alignItems: 'center', paddingVertical: 56, gap: 14 }}>
-      <Ionicons name="sparkles" size={40} color={c.secondary} />
-      <AppText style={{ fontFamily: fonts.serif, fontSize: 18 }} center>{title}</AppText>
-      <AppText color="textMuted" center>{body}</AppText>
-    </View>
   );
 }
 
