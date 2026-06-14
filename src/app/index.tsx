@@ -7,6 +7,8 @@ import { Loader } from '../components/common/Loader';
 
 export default function Index() {
   const status = useAuthStore((s) => s.status);
+  const role = useAuthStore((s) => s.user?.role);
   if (status === 'loading') return <Loader />;
-  return <Redirect href={status === 'authenticated' ? '/home' : '/login'} />;
+  if (status !== 'authenticated') return <Redirect href="/login" />;
+  return <Redirect href={role === 'admin' ? '/admin' : '/home'} />;
 }

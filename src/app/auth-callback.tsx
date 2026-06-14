@@ -69,7 +69,7 @@ export default function AuthCallbackScreen() {
         await tokenStore.set(session.access_token, session.refresh_token);
         const user = await authService.me();
         useAuthStore.setState({ status: 'authenticated', user, error: null });
-        router.replace('/home');
+        router.replace('/');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Authentication failed';
         setErrMsg(msg);

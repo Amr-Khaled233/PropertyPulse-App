@@ -24,6 +24,7 @@ expo-env.d.ts
 # local tools / scratch
 .tools/
 .devlog.txt
+.serverlog.txt
 .ngrok-test.cjs
 
 # debug

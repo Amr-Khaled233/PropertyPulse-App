@@ -35,7 +35,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInEmail(email.trim(), password);
-      router.replace('/home');
+      router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'));
     } finally {
@@ -48,7 +48,7 @@ export default function LoginScreen() {
     setGoogleLoading(true);
     try {
       await signInGoogle();
-      router.replace('/home');
+      router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'));
     } finally {

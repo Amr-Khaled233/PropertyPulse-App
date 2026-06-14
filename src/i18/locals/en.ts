@@ -241,6 +241,7 @@ export const en = {
     titleRequired: 'Title is required',
     noAccess: 'You do not have admin access.',
     noInquiries: 'No inquiries yet.',
+    setStatus: 'Set status',
   },
 };
 

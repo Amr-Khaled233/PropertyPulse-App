@@ -36,7 +36,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await signUpEmail(fullName.trim(), email.trim(), password);
-      router.replace('/home');
+      router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'));
     } finally {
@@ -49,7 +49,7 @@ export default function RegisterScreen() {
     setGoogleLoading(true);
     try {
       await signInGoogle();
-      router.replace('/home');
+      router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'));
     } finally {

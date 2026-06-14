@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { RefreshControl, ScrollView, View, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../components/common/Screen';
@@ -71,6 +71,17 @@ export default function HomeScreen() {
     void load();
     void loadWatch();
   }, [load, loadWatch]);
+
+  // Recompute the unread badge every time Home regains focus — e.g. after the
+  // notifications screen marks items as seen — so the red count clears.
+  useFocusEffect(
+    useCallback(() => {
+      inquiryService
+        .getMyInquiries()
+        .then(async (list) => setNotifCount(await notifCache.countUnseen(list)))
+        .catch(() => {});
+    }, []),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -16,6 +16,7 @@ const PUBLIC = new Set(['index', 'login', 'register', 'auth-callback']);
 
 function useAuthGate() {
   const status = useAuthStore((s) => s.status);
+  const role = useAuthStore((s) => s.user?.role);
   const segments = useSegments();
   const router = useRouter();
 
@@ -23,9 +24,19 @@ function useAuthGate() {
     if (status === 'loading') return;
     const root = segments[0] ?? 'index';
     const isPublic = PUBLIC.has(root);
-    if (status === 'unauthenticated' && !isPublic) router.replace('/login');
-    else if (status === 'authenticated' && (root === 'login' || root === 'register')) router.replace('/home');
-  }, [status, segments, router]);
+
+    if (status === 'unauthenticated') {
+      if (!isPublic) router.replace('/login');
+      return;
+    }
+
+    // Authenticated. Admins live ONLY in the admin area; investors never see it.
+    if (role === 'admin') {
+      if (root !== 'admin' && root !== 'auth-callback') router.replace('/admin');
+    } else if (root === 'admin' || root === 'login' || root === 'register') {
+      router.replace('/home');
+    }
+  }, [status, role, segments, router]);
 }
 
 function useLanguageSync() {

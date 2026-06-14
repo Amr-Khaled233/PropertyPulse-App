@@ -17,6 +17,8 @@ import { PropertyFormModal } from '../../components/admin/PropertyFormModal';
 import { useTheme } from '../../theme/ThemeProvider';
 import { fonts, radius } from '../../theme/theme';
 import { useAuthStore } from '../../store/authStore';
+import { useUiStore } from '../../store/uiStore';
+import { applyLanguage } from '../../i18';
 import { propertyService } from '../../services/api/propertyService';
 import { adminService } from '../../services/api/adminService';
 import { formatCompactCurrency } from '../../utils/formatters';
@@ -26,13 +28,31 @@ import type { UserProfile } from '../../types/user';
 
 type Tab = 'properties' | 'inquiries' | 'users';
 const STATUSES: InquiryStatus[] = ['new', 'in_progress', 'closed'];
+const STATUS_LABEL: Record<InquiryStatus, string> = { new: 'New', in_progress: 'In Progress', closed: 'Closed' };
 
 export default function AdminScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark, setPreference } = useTheme();
   const c = theme.colors;
   const { t } = useTranslation();
+  const language = useUiStore((s) => s.language);
+  const setLanguage = useUiStore((s) => s.setLanguage);
+
+  async function toggleLang() {
+    const next = language === 'ar' ? 'en' : 'ar';
+    setLanguage(next);
+    const { rtlChanged } = await applyLanguage(next);
+    if (rtlChanged) Alert.alert(t('profile.rtlTitle'), t('profile.rtlBody'));
+  }
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const signOut = useAuthStore((s) => s.signOut);
+
+  function confirmSignOut() {
+    Alert.alert(t('auth.signOut'), t('profile.signOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('auth.signOut'), style: 'destructive', onPress: async () => { await signOut(); router.replace('/login'); } },
+    ]);
+  }
 
   const [tab, setTab] = useState<Tab>('properties');
   const [properties, setProperties] = useState<Property[]>([]);
@@ -68,12 +88,15 @@ export default function AdminScreen() {
     ]);
   }
 
-  async function cycleStatus(inq: Inquiry) {
-    const next = STATUSES[(STATUSES.indexOf(inq.status) + 1) % STATUSES.length];
+  async function setStatus(inq: Inquiry, status: InquiryStatus) {
+    if (inq.status === status) return;
+    const previous = inq.status;
+    // Optimistic update — show the new status immediately, revert on failure.
+    setInquiries((prev) => prev.map((i) => (i.id === inq.id ? { ...i, status } : i)));
     try {
-      await adminService.setInquiryStatus(inq.id, next);
-      setInquiries((prev) => prev.map((i) => (i.id === inq.id ? { ...i, status: next } : i)));
+      await adminService.setInquiryStatus(inq.id, status);
     } catch (e) {
+      setInquiries((prev) => prev.map((i) => (i.id === inq.id ? { ...i, status: previous } : i)));
       Alert.alert(t('common.error'), e instanceof Error ? e.message : '');
     }
   }
@@ -94,7 +117,22 @@ export default function AdminScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title={t('admin.title')} onBack={() => router.back()} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 }}>
+        <AppText style={{ fontFamily: fonts.serif, fontSize: 22 }}>{t('admin.title')}</AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+          <Pressable onPress={toggleLang} hitSlop={8}>
+            <AppText style={{ fontFamily: fonts.semibold, fontSize: 14, color: c.secondary }}>
+              {language === 'ar' ? 'EN' : 'ع'}
+            </AppText>
+          </Pressable>
+          <Pressable onPress={() => setPreference(isDark ? 'light' : 'dark')} hitSlop={8}>
+            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={20} color={c.text} />
+          </Pressable>
+          <Pressable onPress={confirmSignOut} hitSlop={8}>
+            <Ionicons name="log-out-outline" size={20} color={c.danger} />
+          </Pressable>
+        </View>
+      </View>
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 8 }}>
         <Chip label={t('admin.properties')} selected={tab === 'properties'} onPress={() => setTab('properties')} />
         <Chip label={t('admin.inquiries')} selected={tab === 'inquiries'} onPress={() => setTab('inquiries')} />
@@ -139,13 +177,42 @@ export default function AdminScreen() {
           ListEmptyComponent={loading ? <InlineLoader /> : <AppText color="textMuted" center>{t('admin.noInquiries')}</AppText>}
           renderItem={({ item }) => (
             <Card>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <AppText style={{ fontFamily: fonts.semibold }}>{item.name}</AppText>
-                <Pressable onPress={() => cycleStatus(item)}><Badge label={item.status.replace('_', ' ')} tone={tones[item.status]} solid /></Pressable>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <AppText style={{ fontFamily: fonts.semibold, flex: 1 }} numberOfLines={1}>{item.name}</AppText>
+                <Badge label={STATUS_LABEL[item.status]} tone={tones[item.status]} solid />
               </View>
               <AppText variant="caption" color="textMuted" style={{ marginTop: 2 }}>{[item.email, item.phone].filter(Boolean).join(' · ')}</AppText>
               {item.message ? <AppText color="textSecondary" style={{ marginTop: 8 }}>{item.message}</AppText> : null}
               <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{item.kind.replace('_', ' ')}</AppText>
+
+              <View style={{ height: 1, backgroundColor: c.border, marginVertical: 12 }} />
+              <AppText variant="caption" color="textMuted" style={{ marginBottom: 8 }}>{t('admin.setStatus')}</AppText>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {STATUSES.map((s) => {
+                  const active = item.status === s;
+                  const accent = s === 'new' ? c.tertiary : s === 'in_progress' ? c.info : c.success;
+                  return (
+                    <Pressable
+                      key={s}
+                      onPress={() => setStatus(item, s)}
+                      style={{
+                        flex: 1,
+                        height: 40,
+                        borderRadius: radius.md,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1.5,
+                        borderColor: active ? accent : c.border,
+                        backgroundColor: active ? accent : 'transparent',
+                      }}
+                    >
+                      <AppText style={{ fontFamily: fonts.semibold, fontSize: 12, color: active ? '#fff' : c.textSecondary }}>
+                        {STATUS_LABEL[s]}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </Card>
           )}
         />

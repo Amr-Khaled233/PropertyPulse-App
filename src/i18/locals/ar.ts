@@ -243,5 +243,6 @@ export const ar: TranslationSchema = {
     titleRequired: 'العنوان مطلوب',
     noAccess: 'ليس لديك صلاحية الإدارة.',
     noInquiries: 'لا استفسارات بعد.',
+    setStatus: 'تغيير الحالة',
   },
 };
