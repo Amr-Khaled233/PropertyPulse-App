@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useWatchlistStore } from '../../store/watchlistStore';
 import { marketService, type MarketOverview } from '../../services/api/marketService';
 import { propertyService } from '../../services/api/propertyService';
+import { inquiryService } from '../../services/api/inquiryService';
 import { formatCompact } from '../../utils/formatters';
 import type { Property } from '../../types/listing';
 
@@ -43,6 +44,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifCount, setNotifCount] = useState(0);
 
   const load = useCallback(async () => {
     setError(null);
@@ -58,6 +60,10 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
+    // Load notification count separately — non-blocking.
+    inquiryService.getMyInquiries()
+      .then((list) => setNotifCount(list.filter((i) => i.status !== 'new').length))
+      .catch(() => {});
   }, [t]);
 
   useEffect(() => {
@@ -75,7 +81,7 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <AppHeader onBell={() => router.push('/pricing')} onProfile={() => router.push('/profile')} />
+      <AppHeader onBell={() => router.push('/notifications')} onProfile={() => router.push('/profile')} bellCount={notifCount} />
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 18, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}

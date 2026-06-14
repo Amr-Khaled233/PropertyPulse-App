@@ -74,6 +74,16 @@ export const adminRepository = {
     return toInquiry(data as InquiryRow);
   },
 
+  async listByEmail(email: string): Promise<Inquiry[]> {
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('*')
+      .eq('email', email)
+      .order('created_at', { ascending: false });
+    if (error) throw new ApiError(500, 'INQUIRIES_FETCH_FAILED', error.message);
+    return (data as InquiryRow[]).map(toInquiry);
+  },
+
   async setInquiryStatus(id: string, status: InquiryStatus): Promise<Inquiry> {
     const { data, error } = await supabase
       .from('inquiries')

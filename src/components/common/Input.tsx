@@ -12,7 +12,7 @@ export interface InputProps extends TextInputProps {
   password?: boolean;
 }
 
-export function Input({ label, error, icon, password, style, ...rest }: InputProps) {
+export function Input({ label, error, icon, password, multiline, style, ...rest }: InputProps) {
   const { theme } = useTheme();
   const c = theme.colors;
   const [focused, setFocused] = useState(false);
@@ -24,24 +24,42 @@ export function Input({ label, error, icon, password, style, ...rest }: InputPro
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: multiline ? 'flex-start' : 'center',
           backgroundColor: c.surface,
           borderRadius: radius.md,
           borderWidth: 1.5,
           borderColor: error ? c.danger : focused ? c.secondary : c.border,
           paddingHorizontal: 14,
-          height: 52,
+          ...(multiline ? { paddingVertical: 12 } : { height: 52 }),
           gap: 10,
         }}
       >
-        {icon && <Ionicons name={icon} size={18} color={c.textMuted} />}
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={18}
+            color={c.textMuted}
+            style={multiline ? { marginTop: 2 } : undefined}
+          />
+        )}
         <TextInput
           {...rest}
+          multiline={multiline}
           secureTextEntry={hidden}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholderTextColor={c.textMuted}
-          style={[{ flex: 1, color: c.text, fontFamily: fonts.body, fontSize: 15, height: '100%' }, style]}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          style={[
+            {
+              flex: 1,
+              color: c.text,
+              fontFamily: fonts.body,
+              fontSize: 15,
+              ...(multiline ? { minHeight: 72 } : { height: '100%' }),
+            },
+            style,
+          ]}
         />
         {password && (
           <Pressable onPress={() => setHidden((h) => !h)} hitSlop={8}>

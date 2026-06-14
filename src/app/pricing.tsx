@@ -33,7 +33,6 @@ interface Plan {
 const PLANS: Plan[] = [
   { id: 'free', tier: 'Base', name: 'Free', price: 0, cadence: 'Forever free', features: ['Basic search', '2 AI reports / month', '1 AI comparison / month', 'Limited market data'] },
   { id: 'pro', tier: 'Elevate', name: 'Pro', price: 850, cadence: 'per month', popular: true, features: ['Unlimited AI reports', 'Full AI advisor', 'Real-time trends', 'Portfolio tools'] },
-  { id: 'enterprise', tier: 'Scale', name: 'Enterprise', price: 2400, cadence: 'per month', features: ['Team collaboration', 'API access', 'Custom AI engine', 'Priority manager'] },
 ];
 
 export default function PricingScreen() {

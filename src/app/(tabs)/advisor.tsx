@@ -65,14 +65,19 @@ export default function AdvisorScreen() {
   const suggestions = [t('advisor.s1'), t('advisor.s2'), t('advisor.s3')];
 
   return (
-    <Screen edges={['top']}>
+    <Screen edges={['top', 'bottom']}>
       <AppHeader rightIcon="sparkles" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={8}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+      >
         <FlatList
           ref={listRef}
           data={messages}
           keyExtractor={(_, i) => String(i)}
           contentContainerStyle={{ padding: 20, gap: 14 }}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => <Bubble msg={item} c={c} />}
           ListHeaderComponent={
             <View style={{ marginBottom: 6 }}>
@@ -97,7 +102,8 @@ export default function AdvisorScreen() {
             placeholder={t('advisor.placeholder')}
             placeholderTextColor={c.textMuted}
             multiline
-            style={{ flex: 1, maxHeight: 110, minHeight: 44, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.background, paddingHorizontal: 14, paddingTop: 12, color: c.text, fontFamily: fonts.body }}
+            textAlignVertical="top"
+            style={{ flex: 1, maxHeight: 110, minHeight: 44, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.background, paddingHorizontal: 14, paddingVertical: 10, color: c.text, fontFamily: fonts.body }}
           />
           <Pressable
             onPress={() => send(input)}

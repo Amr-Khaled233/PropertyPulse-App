@@ -43,6 +43,25 @@ export const authService = {
   async signInWithGoogle(): Promise<UserProfile> {
     const sb = requireSupabase();
     const redirectTo = makeRedirectUri({ scheme: 'propertypulse', path: 'auth-callback' });
+
+    // Pre-flight: verify the phone can reach Supabase before opening Safari.
+    // Email login goes through the local backend (LAN), but OAuth opens
+    // supabase.co directly in the browser — the phone needs real internet.
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 6000);
+      const r = await fetch(`${sb.supabaseUrl}/auth/v1/health`, { signal: controller.signal });
+      clearTimeout(t);
+      if (!r.ok) throw new Error('Supabase auth server returned an error');
+    } catch (e) {
+      const isAbort = (e as Error).name === 'AbortError';
+      throw new Error(
+        isAbort
+          ? 'Cannot reach the authentication server (timeout). Make sure this device has an internet connection — Google sign-in opens supabase.co directly in Safari, which requires internet access separate from the local backend.'
+          : 'Cannot reach the authentication server. Check that this device has internet access and that Google OAuth is enabled in your Supabase dashboard (Authentication → Providers → Google).',
+      );
+    }
+
     const { data, error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: true },
@@ -51,26 +70,48 @@ export const authService = {
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type !== 'success') throw new Error('Google sign-in was cancelled');
+    if (!result.url) throw new Error('No redirect URL received from Google');
 
-    const url = new URL(result.url);
-    const code = url.searchParams.get('code');
-    const hash = new URLSearchParams(url.hash ? url.hash.slice(1) : '');
+    // Parse both PKCE (code in query) and implicit (tokens in hash) flows.
+    let code: string | null = null;
+    let access_token: string | null = null;
+    let refresh_token: string | null = null;
+
+    try {
+      const parsed = new URL(result.url);
+      code = parsed.searchParams.get('code');
+      const hashParams = new URLSearchParams(parsed.hash ? parsed.hash.slice(1) : '');
+      access_token = hashParams.get('access_token');
+      refresh_token = hashParams.get('refresh_token');
+    } catch {
+      // Fallback manual parsing for custom-scheme URLs that URL() may mishandle.
+      const raw = result.url;
+      const qIdx = raw.indexOf('?');
+      const hIdx = raw.indexOf('#');
+      if (qIdx !== -1) {
+        const qs = raw.slice(qIdx + 1, hIdx !== -1 ? hIdx : undefined);
+        code = new URLSearchParams(qs).get('code');
+      }
+      if (hIdx !== -1) {
+        const hp = new URLSearchParams(raw.slice(hIdx + 1));
+        access_token = hp.get('access_token');
+        refresh_token = hp.get('refresh_token');
+      }
+    }
 
     let session = null;
     if (code) {
       const { data: ex, error: exErr } = await sb.auth.exchangeCodeForSession(code);
-      if (exErr || !ex.session) throw new Error(exErr?.message ?? 'Google sign-in failed');
+      if (exErr || !ex.session) throw new Error(exErr?.message ?? 'Google code exchange failed');
       session = ex.session;
-    } else {
-      const access_token = hash.get('access_token');
-      const refresh_token = hash.get('refresh_token');
-      if (!access_token || !refresh_token) throw new Error('No session returned from Google');
+    } else if (access_token && refresh_token) {
       const { data: setData, error: setErr } = await sb.auth.setSession({ access_token, refresh_token });
       if (setErr || !setData.session) throw new Error(setErr?.message ?? 'Google sign-in failed');
       session = setData.session;
+    } else {
+      throw new Error('Google sign-in returned no credentials. Ensure the redirect URL is whitelisted in your Supabase dashboard: ' + redirectTo);
     }
 
-    // Use the Supabase token as the backend Bearer, then load the profile.
     await tokenStore.set(session.access_token, session.refresh_token);
     return this.me();
   },

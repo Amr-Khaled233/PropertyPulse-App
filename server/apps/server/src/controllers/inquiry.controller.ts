@@ -2,7 +2,7 @@
 // from a property page. These land in the admin CRM.
 
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { created } from '../utils/apiResponse.js';
+import { created, ok } from '../utils/apiResponse.js';
 import { adminRepository } from '../repositories/admin.repository.js';
 
 export const inquiryController = {
@@ -16,5 +16,16 @@ export const inquiryController = {
       propertyId: req.body.propertyId,
     });
     created(res, inquiry);
+  }),
+
+  // Returns all inquiries submitted with the authenticated user's email.
+  myInquiries: asyncHandler(async (req, res) => {
+    const email = req.user?.email;
+    if (!email) {
+      ok(res, []);
+      return;
+    }
+    const inquiries = await adminRepository.listByEmail(email);
+    ok(res, inquiries);
   }),
 };

@@ -1,10 +1,7 @@
-// Public inquiry submission (contact / viewing request from a property page).
-//   POST /inquiries { kind, name, email?, phone?, message?, propertyId? }
-
 import { apiClient } from './apiClient';
 import type { Inquiry, InquiryKind } from '../../types/inquiry';
 
-export interface InquiryDraft {
+interface CreateInquiryInput {
   kind: InquiryKind;
   name: string;
   email?: string;
@@ -14,8 +11,13 @@ export interface InquiryDraft {
 }
 
 export const inquiryService = {
-  async create(draft: InquiryDraft): Promise<Inquiry> {
-    const { data } = await apiClient.post<Inquiry>('/inquiries', draft);
+  async create(input: CreateInquiryInput): Promise<Inquiry> {
+    const { data } = await apiClient.post<Inquiry>('/inquiries', input);
+    return data;
+  },
+
+  async getMyInquiries(): Promise<Inquiry[]> {
+    const { data } = await apiClient.get<Inquiry[]>('/inquiries/my');
     return data;
   },
 };

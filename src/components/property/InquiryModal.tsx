@@ -1,7 +1,7 @@
 // Contact / request-viewing form → POST /inquiries.
 
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -57,8 +57,12 @@ export function InquiryModal({ visible, propertyId, onClose }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
-      <Pressable style={{ flex: 1, backgroundColor: c.overlay }} onPress={close} />
-      <View style={{ backgroundColor: c.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, maxHeight: '90%' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Pressable style={{ flex: 1, backgroundColor: c.overlay }} onPress={close} />
+        <View style={{ backgroundColor: c.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, maxHeight: '90%' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingBottom: 8 }}>
           <AppText style={{ fontFamily: fonts.serif, fontSize: 22 }}>{t('inquiry.title')}</AppText>
           <Pressable onPress={close} hitSlop={8}><Ionicons name="close" size={24} color={c.text} /></Pressable>
@@ -72,7 +76,7 @@ export function InquiryModal({ visible, propertyId, onClose }: Props) {
             <Button label={t('common.done')} onPress={close} style={{ marginTop: 8 }} />
           </View>
         ) : (
-          <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16 }} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16, paddingBottom: 24 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <Chip label={t('inquiry.viewing')} selected={kind === 'viewing_request'} onPress={() => setKind('viewing_request')} />
               <Chip label={t('inquiry.contact')} selected={kind === 'contact_message'} onPress={() => setKind('contact_message')} />
@@ -85,7 +89,8 @@ export function InquiryModal({ visible, propertyId, onClose }: Props) {
             <Button label={t('inquiry.submit')} onPress={submit} loading={loading} />
           </ScrollView>
         )}
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

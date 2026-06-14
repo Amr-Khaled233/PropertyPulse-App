@@ -33,9 +33,10 @@ export interface AppHeaderProps {
   onBell?: () => void;
   onProfile?: () => void;
   rightIcon?: keyof typeof Ionicons.glyphMap;
+  bellCount?: number;
 }
 
-export function AppHeader({ onBell, onProfile, rightIcon = 'information-circle-outline' }: AppHeaderProps) {
+export function AppHeader({ onBell, onProfile, rightIcon = 'information-circle-outline', bellCount = 0 }: AppHeaderProps) {
   const { theme } = useTheme();
   return (
     <View
@@ -49,8 +50,28 @@ export function AppHeader({ onBell, onProfile, rightIcon = 'information-circle-o
     >
       <BrandMark />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Pressable onPress={onBell} hitSlop={8}>
+        <Pressable onPress={onBell} hitSlop={8} style={{ position: 'relative' }}>
           <Ionicons name="notifications-outline" size={22} color={theme.colors.textSecondary} />
+          {bellCount > 0 && (
+            <View
+              style={{
+                position: 'absolute',
+                top: -4,
+                right: -5,
+                minWidth: 16,
+                height: 16,
+                borderRadius: 8,
+                backgroundColor: theme.colors.danger,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 3,
+              }}
+            >
+              <AppText style={{ color: '#fff', fontSize: 9, fontFamily: fonts.heading, lineHeight: 11 }}>
+                {bellCount > 9 ? '9+' : String(bellCount)}
+              </AppText>
+            </View>
+          )}
         </Pressable>
         <Pressable onPress={onProfile} hitSlop={8}>
           <Ionicons name={rightIcon} size={22} color={theme.colors.textSecondary} />

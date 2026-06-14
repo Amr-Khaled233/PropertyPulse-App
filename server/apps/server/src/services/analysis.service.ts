@@ -136,21 +136,76 @@ export const analysisService = {
       logger.warn({ err }, 'AI comparison unavailable — using deterministic ranking');
     }
 
-    // Always provide a ranking: fall back to the deterministic investment score.
+    // Always provide a ranking: fall back to deterministic analysis when AI is unavailable.
     if (ranking.length === 0) {
       const ar = lang === 'ar';
       ranking = [...scored]
         .sort((a, b) => b.score - a.score)
-        .map((s, idx) => ({
-          propertyId: s.c.property.id,
-          rank: idx + 1,
-          rationale: ar
-            ? `درجة استثمار ${s.score}/100 — ${s.pricePositionPct <= 0 ? `مسعّر أقل من السوق بنسبة ${Math.abs(s.pricePositionPct).toFixed(0)}%` : `مسعّر أعلى من السوق بنسبة ${s.pricePositionPct.toFixed(0)}%`}.`
-            : `Investment score ${s.score}/100 — ${s.pricePositionPct <= 0 ? `priced ${Math.abs(s.pricePositionPct).toFixed(0)}% below market` : `priced ${s.pricePositionPct.toFixed(0)}% above market`}.`,
-        }));
+        .map((s, idx) => {
+          const m = s.c.metrics;
+          const pp = s.pricePositionPct;
+          const lines: string[] = [];
+
+          if (ar) {
+            // Yield
+            const yieldLabel = m.netRentalYield >= 8 ? 'ممتازة' : m.netRentalYield >= 5 ? 'جيدة' : 'ضعيفة';
+            lines.push(`العائد الإيجاري الصافي ${m.netRentalYield.toFixed(2)}% — ${yieldLabel} مقارنةً بمعيار السوق (5-8%).`);
+            // ROI
+            const roiLabel = m.fiveYearRoi >= 40 ? 'نمو رأسمالي قوي' : m.fiveYearRoi >= 20 ? 'نمو معقول' : 'نمو محدود';
+            lines.push(`العائد على مدى 5 سنوات ${m.fiveYearRoi.toFixed(1)}% — يشير إلى ${roiLabel} على المدى المتوسط.`);
+            // Cash flow
+            lines.push(m.monthlyCashFlow >= 0
+              ? `التدفق النقدي الشهري إيجابي بقيمة ${m.monthlyCashFlow.toFixed(0)} — يغطي التشغيل ويولّد دخلاً فورياً.`
+              : `التدفق النقدي الشهري سلبي بقيمة ${Math.abs(m.monthlyCashFlow).toFixed(0)} — يتطلب دعماً مالياً جزئياً شهرياً.`);
+            // Pricing
+            lines.push(pp <= -5
+              ? `مسعّر أقل من السوق بنسبة ${Math.abs(pp).toFixed(0)}% — يمثّل فرصة شراء جيدة مقارنةً بالعقارات المماثلة.`
+              : pp >= 5
+              ? `مسعّر أعلى من السوق بنسبة ${pp.toFixed(0)}% — يستدعي التفاوض على السعر قبل الشراء.`
+              : `التسعير قريب من القيمة السوقية العادلة بفارق ${Math.abs(pp).toFixed(0)}%.`);
+            // Cap rate
+            const capLabel = m.capRate >= 8 ? 'مرتفع ومناسب للاستثمار' : m.capRate >= 5 ? 'معقول' : 'منخفض نسبياً';
+            lines.push(`معدل الرسملة ${m.capRate.toFixed(2)}% — ${capLabel} وفق المعايير الإقليمية.`);
+            // Cash on cash
+            lines.push(`العائد النقدي على النقد ${m.cashOnCashReturn.toFixed(2)}% — يعكس كفاءة استخدام رأس المال المستثمر.`);
+            // Score
+            lines.push(`درجة الاستثمار الإجمالية: ${s.score}/100.`);
+          } else {
+            // Yield
+            const yieldLabel = m.netRentalYield >= 8 ? 'strong' : m.netRentalYield >= 5 ? 'moderate' : 'below average';
+            lines.push(`Net rental yield is ${m.netRentalYield.toFixed(2)}% — ${yieldLabel} relative to the typical 5–8% market benchmark.`);
+            // ROI
+            const roiLabel = m.fiveYearRoi >= 40 ? 'strong capital growth' : m.fiveYearRoi >= 20 ? 'moderate appreciation' : 'limited upside';
+            lines.push(`5-year ROI of ${m.fiveYearRoi.toFixed(1)}% indicates ${roiLabel} over the medium term.`);
+            // Cash flow
+            lines.push(m.monthlyCashFlow >= 0
+              ? `Monthly cash flow is positive at ${m.monthlyCashFlow.toFixed(0)} EGP — covers operating costs and generates immediate income.`
+              : `Monthly cash flow is negative at ${Math.abs(m.monthlyCashFlow).toFixed(0)} EGP — requires partial out-of-pocket support each month.`);
+            // Pricing
+            lines.push(pp <= -5
+              ? `Priced ${Math.abs(pp).toFixed(0)}% below comparable market listings — represents good value and buying opportunity.`
+              : pp >= 5
+              ? `Priced ${pp.toFixed(0)}% above market comparables — price negotiation is recommended before committing.`
+              : `Priced within ${Math.abs(pp).toFixed(0)}% of fair market value — reasonably in line with the area.`);
+            // Cap rate
+            const capLabel = m.capRate >= 8 ? 'high and investment-grade' : m.capRate >= 5 ? 'acceptable' : 'on the lower side';
+            lines.push(`Cap rate of ${m.capRate.toFixed(2)}% is ${capLabel} against a typical 6–8% regional target.`);
+            // Cash on cash
+            lines.push(`Cash-on-cash return of ${m.cashOnCashReturn.toFixed(2)}% reflects the efficiency of the invested equity.`);
+            // Score
+            lines.push(`Overall investment score: ${s.score}/100.`);
+          }
+
+          return {
+            propertyId: s.c.property.id,
+            rank: idx + 1,
+            rationale: lines.join('\n'),
+          };
+        });
+
       if (!verdict) {
         const best = [...scored].sort((a, b) => b.score - a.score)[0];
-        verdict = ar
+        verdict = lang === 'ar'
           ? `أفضل خيار هو "${best.c.property.title}" بأعلى درجة استثمار وأفضل تسعير مقابل السوق.`
           : `The strongest pick is "${best.c.property.title}" — highest investment score and best price vs market.`;
       }

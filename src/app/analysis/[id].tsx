@@ -18,14 +18,13 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { fonts, radius } from '../../theme/theme';
 import { useUiStore } from '../../store/uiStore';
 import { reportService } from '../../services/api/reportService';
-import { analysisService, type NegotiationResult } from '../../services/api/analysisService';
 import { propertyService } from '../../services/api/propertyService';
 import { buildAssumptions, computeInvestmentMetrics, estimateMonthlyRent, monthlyMortgagePayment } from '../../utils/financial';
 import { formatCompact, formatPct } from '../../utils/formatters';
 import type { InvestmentReport } from '../../types/report';
 import type { Property } from '../../types/listing';
 
-type Tab = 'report' | 'negotiation' | 'financing';
+type Tab = 'report' | 'financing';
 
 export default function AnalysisScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,11 +41,6 @@ export default function AnalysisScreen() {
   const [report, setReport] = useState<InvestmentReport | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-
-  // Negotiation
-  const [nego, setNego] = useState<NegotiationResult | null>(null);
-  const [negoLoading, setNegoLoading] = useState(false);
-  const [negoError, setNegoError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) propertyService.getById(id).then(setProperty).catch(() => {});
@@ -65,25 +59,11 @@ export default function AnalysisScreen() {
     }
   }
 
-  async function genNego() {
-    if (!id) return;
-    setNegoLoading(true);
-    setNegoError(null);
-    try {
-      setNego(await analysisService.negotiation(id, lang));
-    } catch (e) {
-      setNegoError(e instanceof Error ? e.message : t('common.error'));
-    } finally {
-      setNegoLoading(false);
-    }
-  }
-
   return (
     <Screen>
       <ScreenHeader title={t('analysis.title')} onBack={() => router.back()} />
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 8 }}>
         <Chip label={t('analysis.report')} selected={tab === 'report'} onPress={() => setTab('report')} />
-        <Chip label={t('analysis.negotiation')} selected={tab === 'negotiation'} onPress={() => setTab('negotiation')} />
         <Chip label={t('analysis.financing')} selected={tab === 'financing'} onPress={() => setTab('financing')} />
       </View>
 
@@ -101,23 +81,6 @@ export default function AnalysisScreen() {
               cta={t('detail.generateReport')}
               onPress={genReport}
               error={reportError}
-            />
-          )
-        )}
-
-        {tab === 'negotiation' && (
-          negoLoading ? (
-            <AiLoader title={t('analysis.negoTitle')} compact />
-          ) : nego ? (
-            <NegotiationView nego={nego} c={c} t={t} />
-          ) : (
-            <Empty
-              icon="trending-down-outline"
-              title={t('analysis.negoTitle')}
-              body={t('analysis.negoBody')}
-              cta={t('analysis.getTips')}
-              onPress={genNego}
-              error={negoError}
             />
           )
         )}
@@ -143,33 +106,6 @@ function Empty({ icon, title, body, cta, onPress, error }: { icon: keyof typeof 
         <Button label={cta} icon="sparkles" onPress={onPress} style={{ marginTop: 4 }} />
       </View>
     </Card>
-  );
-}
-
-function NegotiationView({ nego, c, t }: { nego: NegotiationResult; c: { secondary: string; tertiary: string; surface: string; border: string }; t: (k: string, o?: Record<string, unknown>) => string }) {
-  return (
-    <View style={{ gap: 16 }}>
-      <Card>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Stat label={t('analysis.askingPrice')} value={`${formatCompact(nego.askingPrice)} ${nego.currency}`} />
-          <Stat label={t('analysis.fairValue')} value={`${formatCompact(nego.fairValue)} ${nego.currency}`} accent />
-        </View>
-        <View style={{ height: 1, backgroundColor: c.border, marginVertical: 14 }} />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Stat label={t('analysis.suggestedOffer')} value={`${formatCompact(nego.suggestedOffer)} ${nego.currency}`} accent />
-          <Stat label={t('analysis.vsMarket')} value={`${nego.deltaPct > 0 ? '+' : ''}${nego.deltaPct.toFixed(1)}%`} />
-        </View>
-      </Card>
-      <AppText color="textSecondary" style={{ lineHeight: 22 }}>{nego.summary}</AppText>
-      <View style={{ gap: 10 }}>
-        {nego.tips?.map((tip, i) => (
-          <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
-            <Ionicons name="checkmark-circle" size={18} color={c.secondary} style={{ marginTop: 1 }} />
-            <AppText color="textSecondary" style={{ flex: 1, lineHeight: 21 }}>{tip}</AppText>
-          </View>
-        ))}
-      </View>
-    </View>
   );
 }
 
