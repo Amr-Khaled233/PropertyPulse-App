@@ -44,24 +44,6 @@ export const authService = {
     const sb = requireSupabase();
     const redirectTo = makeRedirectUri({ scheme: 'propertypulse', path: 'auth-callback' });
 
-    // Pre-flight: verify the phone can reach Supabase before opening Safari.
-    // Email login goes through the local backend (LAN), but OAuth opens
-    // supabase.co directly in the browser — the phone needs real internet.
-    try {
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 6000);
-      const r = await fetch(`${sb.supabaseUrl}/auth/v1/health`, { signal: controller.signal });
-      clearTimeout(t);
-      if (!r.ok) throw new Error('Supabase auth server returned an error');
-    } catch (e) {
-      const isAbort = (e as Error).name === 'AbortError';
-      throw new Error(
-        isAbort
-          ? 'Cannot reach the authentication server (timeout). Make sure this device has an internet connection — Google sign-in opens supabase.co directly in Safari, which requires internet access separate from the local backend.'
-          : 'Cannot reach the authentication server. Check that this device has internet access and that Google OAuth is enabled in your Supabase dashboard (Authentication → Providers → Google).',
-      );
-    }
-
     const { data, error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: true },
