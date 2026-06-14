@@ -19,6 +19,7 @@ import { useWatchlistStore } from '../../store/watchlistStore';
 import { marketService, type MarketOverview } from '../../services/api/marketService';
 import { propertyService } from '../../services/api/propertyService';
 import { inquiryService } from '../../services/api/inquiryService';
+import { notifCache } from '../../services/api/notifCache';
 import { formatCompact } from '../../utils/formatters';
 import type { Property } from '../../types/listing';
 
@@ -62,7 +63,7 @@ export default function HomeScreen() {
     }
     // Load notification count separately — non-blocking.
     inquiryService.getMyInquiries()
-      .then((list) => setNotifCount(list.filter((i) => i.status !== 'new').length))
+      .then(async (list) => setNotifCount(await notifCache.countUnseen(list)))
       .catch(() => {});
   }, [t]);
 

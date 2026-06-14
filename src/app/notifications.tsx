@@ -14,6 +14,7 @@ import { InlineLoader } from '../components/common/Loader';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts, radius } from '../theme/theme';
 import { inquiryService } from '../services/api/inquiryService';
+import { notifCache } from '../services/api/notifCache';
 import type { Inquiry, InquiryStatus } from '../types/inquiry';
 
 const KIND_LABEL: Record<string, string> = {
@@ -70,6 +71,11 @@ export default function NotificationsScreen() {
   }, [t]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Mark all loaded inquiries as seen so the home badge clears.
+  useEffect(() => {
+    if (inquiries.length > 0) void notifCache.markSeen(inquiries);
+  }, [inquiries]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

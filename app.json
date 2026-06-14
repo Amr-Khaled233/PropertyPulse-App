@@ -56,12 +56,13 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9a4b8200-5d11-4881-b5c4-41bd2fed549d"
+        "projectId": "fed518cd-c639-4b9e-a72d-adb4fd1a7b2e"
       },
       "apiUrl": "http://192.168.1.77:4000/api",
       "EXPO_PUBLIC_API_URL": "http://192.168.1.77:4000/api",
       "EXPO_PUBLIC_SUPABASE_URL": "https://orzijclxkrdbnfiizuhy.supabase.co",
       "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_5e5XsOsy1WOafYv-R7vTDw_ncMmkq0J"
-    }
+    },
+    "owner": "ammaric"
   }
 }

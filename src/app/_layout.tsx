@@ -12,7 +12,7 @@ import { useUiStore } from '../store/uiStore';
 import { i18n, applyLanguage } from '../i18';
 
 // Public routes reachable without authentication.
-const PUBLIC = new Set(['index', 'login', 'register']);
+const PUBLIC = new Set(['index', 'login', 'register', 'auth-callback']);
 
 function useAuthGate() {
   const status = useAuthStore((s) => s.status);
