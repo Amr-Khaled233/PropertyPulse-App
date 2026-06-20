@@ -11,6 +11,8 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   GEMINI_API_KEY: z.string().min(1),
   GEMINI_MODEL: z.string().default('gemini-2.5-pro'),
+  // Faster/cheaper model for the chat advisor (reports & compare use GEMINI_MODEL).
+  GEMINI_CHAT_MODEL: z.string().default('gemini-2.5-flash'),
   GEMINI_EMBEDDING_MODEL: z.string().default('text-embedding-004'),
   // Optional — when set, real Stripe Checkout is used; otherwise the gateway is simulated.
   STRIPE_SECRET_KEY: z.string().optional(),

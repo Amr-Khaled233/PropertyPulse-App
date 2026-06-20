@@ -47,7 +47,7 @@ export async function runAnalysisPipeline(input: AnalysisInput): Promise<Analysi
     risk: generated.risk,
     marketTrends: market.trends,
     neighborhood: market.neighborhood,
-    sources: market.retrieval.sources,
+    sources: market.retrieval.sources.length ? market.retrieval.sources : ['PropertyPulse market dataset'],
     assumptions,
   };
 }

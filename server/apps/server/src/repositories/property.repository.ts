@@ -146,6 +146,38 @@ export interface MarketOverview {
 
 let overviewCache: { data: MarketOverview; expires: number } | null = null;
 
+// Typical EGP nominal price growth — used to synthesize a 12-month appreciation
+// curve when the historical `rental_market_stats` table has no rows.
+const ANNUAL_GROWTH = 0.22;
+
+/** A 12-month curve ending this month, back-calculated from an anchor price/m². */
+function buildAppreciationCurve(anchorPricePerSqm: number): MarketTrendPoint[] {
+  const now = new Date();
+  const months = 12;
+  return Array.from({ length: months }).map((_, i) => {
+    const monthsBack = months - 1 - i;
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, 1));
+    const medianPrice = Math.round(anchorPricePerSqm / Math.pow(1 + ANNUAL_GROWTH, monthsBack / 12));
+    return { period: d.toISOString().slice(0, 10), medianPrice, medianRent: 0 };
+  });
+}
+
+/** Fallback trend derived from REAL listings (avg price/m²) for a city/type. */
+async function deriveTrendFromListings(city: string, type?: PropertyType): Promise<MarketTrendPoint[]> {
+  let q = supabase.from('properties').select('price, area_sqm').ilike('city', `%${city}%`).limit(500);
+  if (type) q = q.eq('type', type);
+  const { data, error } = await q;
+  if (error || !data || data.length === 0) return [];
+  let sum = 0;
+  let n = 0;
+  for (const r of data as { price: number | string; area_sqm: number | string }[]) {
+    const price = Number(r.price) || 0;
+    const area = Number(r.area_sqm) || 0;
+    if (price > 0 && area > 0) { sum += price / area; n++; }
+  }
+  return n ? buildAppreciationCurve(Math.round(sum / n)) : [];
+}
+
 // --- Market / neighborhood reads used by the market data agent -------------
 export const marketRepository = {
   /** Aggregate live market stats computed from the real properties table. */
@@ -191,15 +223,7 @@ export const marketRepository = {
     // price/m² of the dataset (ending this month), at a typical Egypt nominal
     // growth rate — instead of arbitrary seeded values.
     const avgPpsm = countPpsm ? Math.round(sumPpsm / countPpsm) : 0;
-    const ANNUAL_GROWTH = 0.22;
-    const now = new Date();
-    const months = 12;
-    const trend = Array.from({ length: months }).map((_, i) => {
-      const monthsBack = months - 1 - i;
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, 1));
-      const medianPrice = Math.round(avgPpsm / Math.pow(1 + ANNUAL_GROWTH, monthsBack / 12));
-      return { period: d.toISOString().slice(0, 10), medianPrice, medianRent: 0 };
-    });
+    const trend = buildAppreciationCurve(avgPpsm);
     const appreciationPct = Math.round(ANNUAL_GROWTH * 1000) / 10;
 
     const data: MarketOverview = {
@@ -232,6 +256,8 @@ export const marketRepository = {
       medianPrice: Number((row as { median_price: number }).median_price ?? 0),
       medianRent: Number((row as { median_rent: number }).median_rent ?? 0),
     }));
+    // No historical rows for this city/type → derive a 12-month curve from real listings.
+    if (rows.length === 0) return deriveTrendFromListings(city, type);
     // Re-anchor periods to the last N months ending this month (seeded dates are stale).
     const now = new Date();
     const n = rows.length;

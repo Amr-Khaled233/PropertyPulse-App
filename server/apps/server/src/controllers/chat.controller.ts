@@ -8,6 +8,7 @@ import { retrieve } from '../ai/rag/retriever.js';
 import { buildMarketContext } from '../ai/chatContext.js';
 import { geminiClient } from '../ai/llm/geminiClient.js';
 import { buildQaPrompt } from '../ai/llm/prompts/qa.prompt.js';
+import { env } from '../config/env.js';
 
 export const chatController = {
   /** POST /chat  { question: string, history?: ChatMessage[] } */
@@ -25,11 +26,22 @@ export const chatController = {
     const context = [liveContext, retrieval.context].filter(Boolean).join('\n\n');
 
     const prompt = buildQaPrompt({ question, context, history, lang });
-    const answer = await geminiClient.generate(prompt.user, {
-      system: prompt.system,
-      temperature: 0.3,
-    });
-
-    ok(res, { answer, sources: retrieval.sources });
+    try {
+      const answer = await geminiClient.generate(prompt.user, {
+        system: prompt.system,
+        temperature: 0.3,
+        model: env.GEMINI_CHAT_MODEL,
+      });
+      ok(res, { answer, sources: retrieval.sources });
+    } catch (err) {
+      // LLM unavailable (quota/outage) — return the live market data with a short
+      // "advisor is busy" header instead of erroring, so the user still gets value.
+      const ar = lang === 'ar';
+      const header = ar
+        ? 'المستشار الذكي مشغول حاليًا، لكن إليك أحدث بيانات السوق المتاحة:'
+        : 'The AI advisor is busy right now — here is the latest market data instead:';
+      const body = liveContext || (ar ? '(لا تتوفر بيانات سوق حالياً.)' : '(No market data available right now.)');
+      ok(res, { answer: `${header}\n\n${body}`, sources: retrieval.sources });
+    }
   }),
 };

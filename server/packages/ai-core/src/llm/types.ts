@@ -22,6 +22,8 @@ export interface GenerationOptions {
   topK?: number;
   /** Force a structured JSON response. */
   json?: boolean;
+  /** Override the model for this single call (defaults to env.GEMINI_MODEL). */
+  model?: string;
 }
 
 export interface LlmRequest {

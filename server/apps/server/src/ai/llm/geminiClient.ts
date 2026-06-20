@@ -44,7 +44,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
 class GeminiClient implements LlmClient {
   async generate(prompt: string, opts: GenerationOptions = {}): Promise<string> {
     const model = genAI.getGenerativeModel({
-      model: env.GEMINI_MODEL,
+      model: opts.model ?? env.GEMINI_MODEL,
       systemInstruction: opts.system,
       generationConfig: toGenerationConfig(opts),
     });
@@ -67,7 +67,7 @@ class GeminiClient implements LlmClient {
   /** Stream a response token-by-token (used by the chat endpoint). */
   async *stream(prompt: string, opts: GenerationOptions = {}): AsyncGenerator<string> {
     const model = genAI.getGenerativeModel({
-      model: env.GEMINI_MODEL,
+      model: opts.model ?? env.GEMINI_MODEL,
       systemInstruction: opts.system,
       generationConfig: toGenerationConfig({ ...opts, json: false }),
     });
