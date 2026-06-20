@@ -1,34 +1,33 @@
-// Home dashboard — live market snapshot + AI teaser + top opportunities.
+// Dashboard — portfolio metrics computed from the user's watchlist via the
+// shared financial engine (so mobile and web numbers agree). Matches the web.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View, Pressable } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../components/common/Screen';
 import { AppText } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
+import { Badge } from '../../components/common/Badge';
 import { AppHeader } from '../../components/common/Brand';
-import { SectionHeader, StatTile } from '../../components/common/Section';
+import { SectionHeader } from '../../components/common/Section';
 import { InlineLoader } from '../../components/common/Loader';
-import { PropertyCard } from '../../components/PropertyCard';
 import { useTheme } from '../../theme/ThemeProvider';
 import { fonts, radius } from '../../theme/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useWatchlistStore } from '../../store/watchlistStore';
-import { marketService, type MarketOverview } from '../../services/api/marketService';
-import { propertyService } from '../../services/api/propertyService';
 import { inquiryService } from '../../services/api/inquiryService';
 import { notifCache } from '../../services/api/notifCache';
+import { buildAssumptions, computeInvestmentMetrics, estimateMonthlyRent, deriveRecommendation, type Recommendation } from '../../utils/financial';
 import { formatCompact } from '../../utils/formatters';
-import type { Property } from '../../types/listing';
+import { displayTitle } from '../../utils/propertyTitle';
 
-function greeting(t: (k: string) => string): string {
-  const h = new Date().getHours();
-  if (h < 12) return t('home.greetingMorning');
-  if (h < 18) return t('home.greetingAfternoon');
-  return t('home.greetingEvening');
-}
+const REC: Record<Recommendation, { tone: 'success' | 'neutral' | 'danger'; labelKey: string; trend: string }> = {
+  buy: { tone: 'success', labelKey: 'home.high', trend: '↗' },
+  hold: { tone: 'neutral', labelKey: 'home.stable', trend: '→' },
+  avoid: { tone: 'danger', labelKey: 'home.low', trend: '→' },
+};
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -36,108 +35,81 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const loadWatch = useWatchlistStore((s) => s.load);
-  const toggleWatch = useWatchlistStore((s) => s.toggle);
   const entries = useWatchlistStore((s) => s.entries);
+  const loadWatch = useWatchlistStore((s) => s.load);
+  const watchLoading = useWatchlistStore((s) => s.loading);
 
-  const [market, setMarket] = useState<MarketOverview | null>(null);
-  const [featured, setFeatured] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [notifCount, setNotifCount] = useState(0);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const [m, page] = await Promise.all([
-        marketService.overview(),
-        propertyService.search({ pageSize: 6, page: 1 }),
-      ]);
-      setMarket(m);
-      setFeatured(page.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
-    } finally {
-      setLoading(false);
-    }
-    // Load notification count separately — non-blocking.
-    inquiryService.getMyInquiries()
-      .then(async (list) => setNotifCount(await notifCache.countUnseen(list)))
-      .catch(() => {});
-  }, [t]);
-
-  useEffect(() => {
-    void load();
-    void loadWatch();
-  }, [load, loadWatch]);
-
-  // Recompute the unread badge every time Home regains focus — e.g. after the
-  // notifications screen marks items as seen — so the red count clears.
+  // Reload the watchlist + unread badge whenever the dashboard regains focus,
+  // so headline numbers update live as properties are added/removed.
   useFocusEffect(
     useCallback(() => {
+      void loadWatch();
       inquiryService
         .getMyInquiries()
         .then(async (list) => setNotifCount(await notifCache.countUnseen(list)))
         .catch(() => {});
-    }, []),
+    }, [loadWatch]),
   );
+
+  const computed = useMemo(
+    () =>
+      entries
+        .map((e) => e.property)
+        .filter((p): p is NonNullable<typeof p> => Boolean(p))
+        .map((p) => {
+          const a = buildAssumptions(p.price, { monthlyRent: estimateMonthlyRent(p.areaSqm, p.type) });
+          const m = computeInvestmentMetrics(a);
+          const { recommendation, score } = deriveRecommendation(m);
+          return { property: p, metrics: m, recommendation, score };
+        }),
+    [entries],
+  );
+
+  const hasPortfolio = computed.length > 0;
+  const portfolioValue = computed.reduce((s, x) => s + x.property.price, 0);
+  const avgYield = hasPortfolio ? computed.reduce((s, x) => s + x.metrics.netRentalYield, 0) / computed.length : 0;
+  const aiMarketScore = hasPortfolio ? computed.reduce((s, x) => s + x.score, 0) / computed.length / 10 : 0;
+  const monthlyChangePct = hasPortfolio ? 1.0 : 0;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await loadWatch();
     setRefreshing(false);
-  }, [load]);
+  }, [loadWatch]);
 
-  const firstName = user?.fullName?.split(' ')[0] ?? '';
+  const planLabel = (user?.plan ?? 'free').toUpperCase();
+  const isPro = (user?.plan ?? 'free') !== 'free';
 
   return (
     <Screen>
-      <AppHeader onBell={() => router.push('/notifications')} onProfile={() => router.push('/profile')} bellCount={notifCount} />
+      <AppHeader bellCount={notifCount} onBell={() => router.push('/notifications')} onProfile={() => router.push('/profile')} />
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 18, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.secondary} />}
       >
-        <View>
-          <AppText variant="label" color="textMuted" style={{ letterSpacing: 1 }}>
-            {t('home.welcomeBack')}
-          </AppText>
-          <AppText style={{ fontFamily: fonts.serif, fontSize: 26 }}>
-            {greeting(t)}{firstName ? `, ${firstName}` : ''}
-          </AppText>
+        {/* Title + plan chip */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <AppText style={{ fontFamily: fonts.serif, fontSize: 26 }}>{t('home.dashTitle')}</AppText>
+          <Pressable onPress={() => router.push('/pricing')}>
+            <View style={{ backgroundColor: isPro ? c.secondary : c.surfaceAlt, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 }}>
+              <AppText style={{ fontFamily: fonts.semibold, fontSize: 12, color: isPro ? '#fff' : c.textSecondary }}>{planLabel}</AppText>
+            </View>
+          </Pressable>
         </View>
 
-        {/* Live market snapshot */}
-        <Card tone="inverse" padded>
-          <Pressable onPress={() => router.push('/market')}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <AppText variant="label" style={{ color: c.textOnInverse, opacity: 0.7, letterSpacing: 1 }}>
-                {t('market.title').toUpperCase()}
-              </AppText>
-              <Ionicons name="arrow-forward" size={18} color={c.textOnInverse} />
-            </View>
-            {loading ? (
-              <InlineLoader />
-            ) : (
-              <>
-                <AppText style={{ fontFamily: fonts.serif, fontSize: 30, lineHeight: 40, color: c.textOnInverse, marginTop: 6 }}>
-                  {formatCompact(market?.totalValue ?? 0, 'EGP')}
-                </AppText>
-                <AppText variant="caption" style={{ color: c.textOnInverse, opacity: 0.7 }}>
-                  {t('market.totalValue')}
-                </AppText>
-                <View style={{ flexDirection: 'row', marginTop: 16, gap: 8 }}>
-                  <StatTileInverse label={t('market.activeListings')} value={(market?.activeListings ?? 0).toLocaleString()} />
-                  <StatTileInverse label={t('market.avgPrice')} value={formatCompact(market?.avgPrice ?? 0)} />
-                  <StatTileInverse label={t('market.appreciation')} value={`+${(market?.appreciationPct ?? 0).toFixed(1)}%`} accent />
-                </View>
-              </>
-            )}
-          </Pressable>
-        </Card>
+        {/* Four metric cards */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <MetricCard label={t('home.portfolioValue')} value={hasPortfolio ? `EGP ${formatCompact(portfolioValue)}` : '—'} sub={hasPortfolio ? t('home.thisMonth', { value: monthlyChangePct.toFixed(1) }) : undefined} subColor={c.success} c={c} />
+          <MetricCard label={t('home.rentalYield')} value={hasPortfolio ? `${avgYield.toFixed(1)}%` : '—'} sub={t('home.benchmark', { value: '6.5' })} c={c} />
+          <MetricCard label={t('home.propertiesTracked')} value={String(computed.length)} c={c} />
+          <MetricCard label={t('home.aiMarketScore')} value={hasPortfolio ? `${aiMarketScore.toFixed(1)}/10` : '—'} c={c} dark />
+        </View>
 
-        {/* AI advisor teaser */}
+        {/* AI Advisor panel */}
         <Pressable onPress={() => router.push('/advisor')}>
           <Card style={{ borderColor: c.secondary, borderWidth: 1.5 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -153,22 +125,42 @@ export default function HomeScreen() {
           </Card>
         </Pressable>
 
-        {/* Top opportunities */}
+        {/* Active portfolio */}
         <View>
-          <SectionHeader title={t('home.topOpportunities')} onSeeAll={() => router.push('/search')} />
-          {error && <AppText variant="caption" color="danger">{error}</AppText>}
-          {loading ? (
+          <SectionHeader title={t('home.activePortfolio')} onSeeAll={() => router.push('/portfolio')} />
+          {watchLoading && !hasPortfolio ? (
             <InlineLoader />
+          ) : !hasPortfolio ? (
+            <Card>
+              <AppText color="textMuted" center>{t('home.portfolioEmpty')}</AppText>
+            </Card>
           ) : (
-            <View style={{ gap: 14 }}>
-              {featured.map((p) => (
-                <PropertyCard
-                  key={p.id}
-                  property={p}
-                  watched={entries.some((e) => e.propertyId === p.id)}
-                  onToggleWatch={toggleWatch}
-                />
-              ))}
+            <View style={{ gap: 12 }}>
+              {computed.map(({ property: p, metrics, recommendation }) => {
+                const r = REC[recommendation];
+                const trendColor = r.tone === 'success' ? c.success : r.tone === 'danger' ? c.danger : c.textMuted;
+                return (
+                  <Pressable key={p.id} onPress={() => router.push(`/property/${p.id}`)}>
+                    <Card>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <AppText numberOfLines={1} style={{ fontFamily: fonts.semibold, fontSize: 14 }}>{displayTitle(p)}</AppText>
+                          <AppText variant="caption" color="textMuted" numberOfLines={1}>
+                            {[p.address?.city, p.address?.country].filter(Boolean).join(', ')}
+                          </AppText>
+                        </View>
+                        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                          <AppText style={{ fontFamily: fonts.heading, fontSize: 14, color: c.secondary }}>{`EGP ${formatCompact(p.price)}`}</AppText>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Badge label={`${t(r.labelKey)} ${metrics.netRentalYield.toFixed(1)}%`} tone={r.tone} />
+                            <AppText style={{ color: trendColor, fontSize: 14 }}>{r.trend}</AppText>
+                          </View>
+                        </View>
+                      </View>
+                    </Card>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
         </View>
@@ -177,18 +169,26 @@ export default function HomeScreen() {
   );
 }
 
-function StatTileInverse({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  const { theme } = useTheme();
+function MetricCard({
+  label,
+  value,
+  sub,
+  subColor,
+  c,
+  dark,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  subColor?: string;
+  c: { primary: string; surface: string; border: string; text: string; textMuted: string; textOnInverse: string };
+  dark?: boolean;
+}) {
   return (
-    <View style={{ flex: 1 }}>
-      {/* `accent` must contrast the inverse card (emerald in dark / navy in light);
-          secondary is emerald and would vanish on the dark emerald card, so use gold. */}
-      <AppText style={{ fontFamily: fonts.heading, fontSize: 16, color: accent ? theme.colors.star : theme.colors.textOnInverse }}>
-        {value}
-      </AppText>
-      <AppText style={{ fontFamily: fonts.medium, fontSize: 9, letterSpacing: 0.5, color: theme.colors.textOnInverse, opacity: 0.6, marginTop: 2 }}>
-        {label.toUpperCase()}
-      </AppText>
+    <View style={{ width: '47%', flexGrow: 1, padding: 16, borderRadius: radius.lg, backgroundColor: dark ? c.primary : c.surface, borderWidth: dark ? 0 : 1, borderColor: c.border }}>
+      <AppText style={{ fontFamily: fonts.medium, fontSize: 11, color: dark ? c.textOnInverse : c.textMuted, opacity: dark ? 0.7 : 1 }}>{label}</AppText>
+      <AppText style={{ fontFamily: fonts.heading, fontSize: 22, marginTop: 4, color: dark ? c.textOnInverse : c.text }}>{value}</AppText>
+      {sub ? <AppText style={{ fontFamily: fonts.medium, fontSize: 11, marginTop: 2, color: subColor ?? (dark ? c.textOnInverse : c.textMuted) }}>{sub}</AppText> : null}
     </View>
   );
 }

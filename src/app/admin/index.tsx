@@ -21,10 +21,11 @@ import { useUiStore } from '../../store/uiStore';
 import { applyLanguage } from '../../i18';
 import { propertyService } from '../../services/api/propertyService';
 import { adminService } from '../../services/api/adminService';
+import { adminNotifCache } from '../../services/api/adminNotifCache';
 import { formatCompactCurrency } from '../../utils/formatters';
 import type { Property } from '../../types/listing';
 import type { Inquiry, InquiryStatus } from '../../types/inquiry';
-import type { UserProfile } from '../../types/user';
+import type { UserProfile, PlanTier } from '../../types/user';
 
 type Tab = 'properties' | 'inquiries' | 'users';
 const STATUSES: InquiryStatus[] = ['new', 'in_progress', 'closed'];
@@ -50,7 +51,7 @@ export default function AdminScreen() {
   function confirmSignOut() {
     Alert.alert(t('auth.signOut'), t('profile.signOutConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('auth.signOut'), style: 'destructive', onPress: async () => { await signOut(); router.replace('/login'); } },
+      { text: t('auth.signOut'), style: 'destructive', onPress: async () => { await signOut(); router.replace('/landing'); } },
     ]);
   }
 
@@ -61,6 +62,26 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
+  const [adminNotif, setAdminNotif] = useState(0);
+
+  const refreshBadge = useCallback(async () => {
+    try {
+      const [inq, usr] = await Promise.all([adminService.listInquiries(), adminService.listUsers()]);
+      setAdminNotif(await adminNotifCache.unseenCount(inq.map((i) => i.id), usr.map((u) => u.id)));
+    } catch {
+      /* badge is best-effort */
+    }
+  }, []);
+
+  async function clearBadge() {
+    try {
+      const [inq, usr] = await Promise.all([adminService.listInquiries(), adminService.listUsers()]);
+      await adminNotifCache.markAllSeen(inq.map((i) => i.id), usr.map((u) => u.id));
+    } catch {
+      /* ignore */
+    }
+    setAdminNotif(0);
+  }
 
   const loadProperties = useCallback(async () => {
     setLoading(true);
@@ -68,18 +89,30 @@ export default function AdminScreen() {
   }, []);
   const loadInquiries = useCallback(async () => {
     setLoading(true);
-    try { setInquiries(await adminService.listInquiries()); } catch { setInquiries([]); } finally { setLoading(false); }
-  }, []);
+    try {
+      const list = await adminService.listInquiries();
+      setInquiries(list);
+      await adminNotifCache.markInquiriesSeen(list.map((i) => i.id));
+      void refreshBadge();
+    } catch { setInquiries([]); } finally { setLoading(false); }
+  }, [refreshBadge]);
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    try { setUsers(await adminService.listUsers()); } catch { setUsers([]); } finally { setLoading(false); }
-  }, []);
+    try {
+      const list = await adminService.listUsers();
+      setUsers(list);
+      await adminNotifCache.markUsersSeen(list.map((u) => u.id));
+      void refreshBadge();
+    } catch { setUsers([]); } finally { setLoading(false); }
+  }, [refreshBadge]);
 
   useEffect(() => {
     if (tab === 'properties') void loadProperties();
     else if (tab === 'inquiries') void loadInquiries();
     else void loadUsers();
   }, [tab, loadProperties, loadInquiries, loadUsers]);
+
+  useEffect(() => { void refreshBadge(); }, [refreshBadge]);
 
   function deleteProperty(p: Property) {
     Alert.alert(t('admin.deleteTitle'), p.title, [
@@ -97,6 +130,31 @@ export default function AdminScreen() {
       await adminService.setInquiryStatus(inq.id, status);
     } catch (e) {
       setInquiries((prev) => prev.map((i) => (i.id === inq.id ? { ...i, status: previous } : i)));
+      Alert.alert(t('common.error'), e instanceof Error ? e.message : '');
+    }
+  }
+
+  function deleteInquiry(inq: Inquiry) {
+    Alert.alert(t('admin.deleteInquiryTitle'), inq.name, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('admin.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          setInquiries((prev) => prev.filter((i) => i.id !== inq.id));
+          try { await adminService.deleteInquiry(inq.id); } catch { void loadInquiries(); }
+        },
+      },
+    ]);
+  }
+
+  async function changePlan(u: UserProfile, plan: PlanTier) {
+    if ((u.plan ?? 'free') === plan) return;
+    setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, plan } : x)));
+    try {
+      await adminService.setUserPlan(u.id, plan);
+    } catch (e) {
+      void loadUsers();
       Alert.alert(t('common.error'), e instanceof Error ? e.message : '');
     }
   }
@@ -120,6 +178,14 @@ export default function AdminScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 }}>
         <AppText style={{ fontFamily: fonts.serif, fontSize: 22 }}>{t('admin.title')}</AppText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+          <Pressable onPress={() => { void clearBadge(); setTab('inquiries'); }} hitSlop={8} style={{ position: 'relative' }}>
+            <Ionicons name="notifications-outline" size={20} color={c.textSecondary} />
+            {adminNotif > 0 && (
+              <View style={{ position: 'absolute', top: -4, right: -5, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: c.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                <AppText style={{ color: '#fff', fontSize: 9, fontFamily: fonts.heading, lineHeight: 11 }}>{adminNotif > 9 ? '9+' : String(adminNotif)}</AppText>
+              </View>
+            )}
+          </Pressable>
           <Pressable onPress={toggleLang} hitSlop={8}>
             <AppText style={{ fontFamily: fonts.semibold, fontSize: 14, color: c.secondary }}>
               {language === 'ar' ? 'EN' : 'ع'}
@@ -180,9 +246,15 @@ export default function AdminScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <AppText style={{ fontFamily: fonts.semibold, flex: 1 }} numberOfLines={1}>{item.name}</AppText>
                 <Badge label={STATUS_LABEL[item.status]} tone={tones[item.status]} solid />
+                <Pressable onPress={() => deleteInquiry(item)} hitSlop={6}><Ionicons name="trash-outline" size={18} color={c.danger} /></Pressable>
               </View>
               <AppText variant="caption" color="textMuted" style={{ marginTop: 2 }}>{[item.email, item.phone].filter(Boolean).join(' · ')}</AppText>
-              {item.message ? <AppText color="textSecondary" style={{ marginTop: 8 }}>{item.message}</AppText> : null}
+              {item.message ? (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 8 }}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={15} color={c.textMuted} style={{ marginTop: 2 }} />
+                  <AppText color="textSecondary" style={{ flex: 1, lineHeight: 20 }}>{item.message}</AppText>
+                </View>
+              ) : null}
               <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{item.kind.replace('_', ' ')}</AppText>
 
               <View style={{ height: 1, backgroundColor: c.border, marginVertical: 12 }} />
@@ -232,6 +304,24 @@ export default function AdminScreen() {
                   <AppText variant="caption" color="textMuted">{item.email}</AppText>
                 </View>
                 <Badge label={item.role} tone={item.role === 'admin' ? 'success' : 'neutral'} />
+              </View>
+              <View style={{ height: 1, backgroundColor: c.border, marginVertical: 10 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <AppText variant="caption" color="textMuted">{t('admin.plan')}</AppText>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {(['free', 'pro'] as const).map((pl) => {
+                    const active = (item.plan ?? 'free') === pl;
+                    return (
+                      <Pressable
+                        key={pl}
+                        onPress={() => changePlan(item, pl)}
+                        style={{ paddingHorizontal: 14, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: active ? c.secondary : c.border, backgroundColor: active ? c.secondary : 'transparent' }}
+                      >
+                        <AppText style={{ fontFamily: fonts.semibold, fontSize: 12, color: active ? '#fff' : c.textSecondary }}>{pl.toUpperCase()}</AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
             </Card>
           )}

@@ -19,6 +19,11 @@ export const adminService = {
     return data;
   },
 
+  async setUserPlan(id: string, plan: string): Promise<UserProfile> {
+    const { data } = await apiClient.put<UserProfile>(`/admin/users/${id}/plan`, { plan });
+    return data;
+  },
+
   async createProperty(input: PropertyDraft): Promise<Property> {
     const { data } = await apiClient.post<Property>('/admin/properties', input);
     return data;
@@ -41,5 +46,9 @@ export const adminService = {
   async setInquiryStatus(id: string, status: InquiryStatus): Promise<Inquiry> {
     const { data } = await apiClient.put<Inquiry>(`/admin/inquiries/${id}/status`, { status });
     return data;
+  },
+
+  async deleteInquiry(id: string): Promise<void> {
+    await apiClient.delete(`/admin/inquiries/${id}`);
   },
 };

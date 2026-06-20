@@ -15,7 +15,9 @@ export const paymentController = {
   /** POST /payments/checkout  { plan } — start a Stripe Checkout Session. */
   checkout: asyncHandler(async (req, res) => {
     if (!req.user) throw ApiError.unauthorized();
-    ok(res, await paymentService.createCheckout(req.user.id, req.body.plan));
+    // `returnUrl` (e.g. the mobile app's deep-link scheme) overrides the web
+    // success/cancel URLs so native clients can intercept the redirect.
+    ok(res, await paymentService.createCheckout(req.user.id, req.body.plan, req.body.returnUrl));
   }),
 
   /** GET /payments/confirm?session_id=... — verify payment and apply the plan. */

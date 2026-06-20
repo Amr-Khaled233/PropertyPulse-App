@@ -94,4 +94,9 @@ export const adminRepository = {
     if (error) throw new ApiError(500, 'INQUIRY_UPDATE_FAILED', error.message);
     return toInquiry(data as InquiryRow);
   },
+
+  async deleteInquiry(id: string): Promise<void> {
+    const { error } = await supabase.from('inquiries').delete().eq('id', id);
+    if (error) throw new ApiError(500, 'INQUIRY_DELETE_FAILED', error.message);
+  },
 };

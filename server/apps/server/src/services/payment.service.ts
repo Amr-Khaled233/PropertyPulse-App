@@ -44,7 +44,7 @@ export const paymentService = {
   },
 
   /** Create a Stripe Checkout Session and return its URL (or signal fallback). */
-  async createCheckout(userId: string, plan: PlanTier): Promise<{ url: string | null; simulated: boolean; sessionId: string | null }> {
+  async createCheckout(userId: string, plan: PlanTier, returnUrl?: string): Promise<{ url: string | null; simulated: boolean; sessionId: string | null }> {
     assertPlan(plan);
     const amount = PLAN_PRICE_EGP[plan];
     // Free plan or no Stripe configured → simulate (caller upgrades directly).
@@ -52,7 +52,10 @@ export const paymentService = {
       return { url: null, simulated: true, sessionId: null };
     }
 
-    const base = env.CORS_ORIGIN;
+    // Native clients pass their deep-link scheme as returnUrl so they can
+    // intercept the redirect; the web falls back to its own /pricing route.
+    const base = returnUrl || `${env.CORS_ORIGIN}/pricing`;
+    const sep = base.includes('?') ? '&' : '?';
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [
@@ -66,8 +69,8 @@ export const paymentService = {
         },
       ],
       metadata: { userId, plan },
-      success_url: `${base}/pricing?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/pricing?canceled=1`,
+      success_url: `${base}${sep}session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}${sep}canceled=1`,
     });
     return { url: session.url, simulated: false, sessionId: session.id };
   },

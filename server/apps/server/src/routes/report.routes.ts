@@ -13,3 +13,4 @@ reportRouter.use(requireAuth);
 reportRouter.post('/', aiLimiter, validate(generateReportSchema), reportController.generate);
 reportRouter.get('/', reportController.list);
 reportRouter.get('/:id', reportController.getById);
+reportRouter.delete('/:id', reportController.remove);

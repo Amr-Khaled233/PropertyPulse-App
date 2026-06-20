@@ -41,7 +41,7 @@ export default function ProfileScreen() {
       {
         text: t('auth.signOut'),
         style: 'destructive',
-        onPress: async () => { await signOut(); resetWatch(); router.replace('/login'); },
+        onPress: async () => { await signOut(); resetWatch(); router.replace('/landing'); },
       },
     ]);
   }
@@ -92,6 +92,10 @@ export default function ProfileScreen() {
 
         {/* Links */}
         <Card padded={false}>
+          <LinkRow icon="document-text-outline" label={t('profile.viewReports')} onPress={() => router.push('/reports')} c={c} />
+          <Divider c={c} />
+          <LinkRow icon="git-compare-outline" label={t('compare.savedTitle')} onPress={() => router.push('/compares')} c={c} />
+          <Divider c={c} />
           <LinkRow icon="diamond-outline" label={t('pricing.title')} onPress={() => router.push('/pricing')} c={c} />
           {user?.role === 'admin' && (
             <>

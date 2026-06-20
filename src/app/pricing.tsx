@@ -14,6 +14,7 @@ import { Button } from '../components/common/Button';
 import { ScreenHeader } from '../components/common/Brand';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts, radius } from '../theme/theme';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useAuthStore } from '../store/authStore';
 import { paymentService, type PlanId } from '../services/api/paymentService';
 
@@ -41,44 +42,52 @@ export default function PricingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const currentPlan: PlanId = (user?.plan as PlanId) ?? 'free';
 
   const [selectedId, setSelectedId] = useState<PlanId>('pro');
   const [processing, setProcessing] = useState(false);
 
   const selected = PLANS.find((p) => p.id === selectedId) ?? PLANS[1];
+  const isCurrentSelected = selected.id === currentPlan;
   const vat = Math.round(selected.price * VAT_RATE);
   const total = selected.price + vat;
   const money = (n: number) => `${CURRENCY} ${n.toLocaleString()}`;
 
+  // After any successful upgrade: refresh the profile (so PRO shows app-wide),
+  // confirm to the user, and land them on Profile.
+  async function onUpgraded(plan: PlanId) {
+    await refreshProfile();
+    const name = PLANS.find((p) => p.id === plan)?.name ?? plan;
+    Alert.alert(t('pricing.successTitle'), t('pricing.successBody', { plan: name }));
+    router.replace('/profile');
+  }
+
   async function subscribe() {
-    if (selected.price === 0) return;
+    if (isCurrentSelected || selected.price === 0) return;
     setProcessing(true);
     try {
-      const checkout = await paymentService.startCheckout(selected.id);
+      const returnUrl = makeRedirectUri({ scheme: 'propertypulse', path: 'pricing' });
+      const checkout = await paymentService.startCheckout(selected.id, returnUrl);
 
+      // Simulated gateway (Stripe off) → upgrade directly.
       if (checkout.simulated || !checkout.url || !checkout.sessionId) {
-        // No Stripe configured (demo / free plan) → upgrade directly.
-        const res = await paymentService.subscribe({ plan: selected.id, amount: total, currency: CURRENCY });
-        if (user) setUser({ ...user, plan: res.plan ?? selected.id });
-        Alert.alert(t('pricing.successTitle'), t('pricing.successBody', { plan: selected.name }));
+        await paymentService.subscribe({ plan: selected.id, amount: total, currency: CURRENCY });
+        await onUpgraded(selected.id);
         return;
       }
 
-      // Real Stripe: open checkout, then verify the session server-side.
-      await WebBrowser.openBrowserAsync(checkout.url);
-
-      // confirmCheckout checks session.payment_status === 'paid' on Stripe.
-      // It throws if the user cancelled or didn't complete payment.
-      const res = await paymentService.confirm(checkout.sessionId);
-      if (user) setUser({ ...user, plan: res.plan ?? selected.id });
-      Alert.alert(t('pricing.successTitle'), t('pricing.successBody', { plan: selected.name }));
+      // Real Stripe: open Checkout, then intercept the redirect back to the app.
+      const result = await WebBrowser.openAuthSessionAsync(checkout.url, returnUrl);
+      if (result.type !== 'success' || !result.url) return; // dismissed / cancelled
+      const back = new URL(result.url);
+      if (back.searchParams.get('canceled')) return;
+      const sessionId = back.searchParams.get('session_id') ?? checkout.sessionId;
+      const res = await paymentService.confirm(sessionId);
+      await onUpgraded(res.plan ?? selected.id);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
-      if (msg === 'Payment not completed') {
-        // User cancelled or closed Stripe without paying — no error shown.
-        return;
-      }
+      if (msg === 'Payment not completed') return; // cancelled mid-flow
       Alert.alert(t('pricing.failedTitle'), msg || t('pricing.failedBody'));
     } finally {
       setProcessing(false);
@@ -132,10 +141,10 @@ export default function PricingScreen() {
           <View style={{ height: 1, backgroundColor: c.border, marginVertical: 10 }} />
           <Row label={t('pricing.total')} value={money(total)} c={c} bold />
           <Button
-            label={processing ? t('common.loading') : selected.price === 0 ? t('pricing.current') : t('pricing.payStripe')}
+            label={isCurrentSelected ? t('pricing.current') : selected.price === 0 ? t('pricing.free') : t('pricing.payStripe')}
             onPress={subscribe}
             loading={processing}
-            disabled={selected.price === 0}
+            disabled={processing || isCurrentSelected || selected.price === 0}
             style={{ marginTop: 16 }}
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>

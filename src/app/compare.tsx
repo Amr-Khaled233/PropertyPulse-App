@@ -18,6 +18,7 @@ import { useUiStore } from '../store/uiStore';
 import { analysisService, type ComparisonResult } from '../services/api/analysisService';
 import { formatCompactCurrency, formatPct } from '../utils/formatters';
 import { displayTitle } from '../utils/propertyTitle';
+import { savedCompareCache } from '../services/api/savedCompareCache';
 
 function cleanText(text: string, candidates: ComparisonCandidate[]): string {
   let t = text;
@@ -40,8 +41,23 @@ export default function CompareScreen() {
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string; isLimit: boolean } | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const propertyIds = (ids ?? '').split(',').filter(Boolean);
+
+  async function onSave() {
+    if (!result) return;
+    try {
+      await savedCompareCache.save({
+        ids: propertyIds.join(','),
+        titles: result.candidates.map((cn) => displayTitle(cn.property)),
+        verdict: cleanText(result.verdict, result.candidates),
+      });
+      setSaved(true);
+    } catch {
+      /* best-effort */
+    }
+  }
 
   async function run() {
     setLoading(true);
@@ -88,6 +104,14 @@ export default function CompareScreen() {
               <AppText variant="label" style={{ color: c.textOnInverse, opacity: 0.7 }}>{t('compare.verdict')}</AppText>
               <AppText style={{ color: c.textOnInverse, marginTop: 6, lineHeight: 22 }}>{cleanText(result.verdict, result.candidates)}</AppText>
             </Card>
+
+            <Button
+              label={saved ? t('compare.saved') : t('compare.save')}
+              icon={saved ? 'checkmark' : 'bookmark-outline'}
+              variant="outlined"
+              onPress={onSave}
+              disabled={saved}
+            />
 
             {[...result.candidates]
               .sort((a, b) => (rankOf(a.property.id) ?? 99) - (rankOf(b.property.id) ?? 99))

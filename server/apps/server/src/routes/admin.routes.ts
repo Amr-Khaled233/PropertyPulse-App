@@ -13,6 +13,7 @@ export const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get('/users', adminController.listUsers);
+adminRouter.put('/users/:id/plan', adminController.setUserPlan);
 
 adminRouter.post('/properties', validate(createPropertySchema), adminController.createProperty);
 adminRouter.put('/properties/:id', validate(updatePropertySchema), adminController.updateProperty);
@@ -20,3 +21,4 @@ adminRouter.delete('/properties/:id', adminController.deleteProperty);
 
 adminRouter.get('/inquiries', adminController.listInquiries);
 adminRouter.put('/inquiries/:id/status', validate(inquiryStatusSchema), adminController.setInquiryStatus);
+adminRouter.delete('/inquiries/:id', adminController.deleteInquiry);

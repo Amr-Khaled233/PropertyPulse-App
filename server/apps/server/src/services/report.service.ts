@@ -61,4 +61,10 @@ export const reportService = {
   listForUser(userId: string): Promise<InvestmentReport[]> {
     return reportRepository.listForUser(userId);
   },
+
+  async remove(id: string, userId: string): Promise<void> {
+    // Ensure the report belongs to the user before deleting.
+    await this.getById(id, userId);
+    await reportRepository.remove(id, userId);
+  },
 };

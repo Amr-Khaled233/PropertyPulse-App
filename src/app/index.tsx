@@ -9,6 +9,6 @@ export default function Index() {
   const status = useAuthStore((s) => s.status);
   const role = useAuthStore((s) => s.user?.role);
   if (status === 'loading') return <Loader />;
-  if (status !== 'authenticated') return <Redirect href="/login" />;
+  if (status !== 'authenticated') return <Redirect href="/landing" />;
   return <Redirect href={role === 'admin' ? '/admin' : '/home'} />;
 }

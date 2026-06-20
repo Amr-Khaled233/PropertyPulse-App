@@ -28,4 +28,10 @@ export const reportController = {
     const reports = await reportService.listForUser(req.user.id);
     ok(res, reports);
   }),
+
+  remove: asyncHandler(async (req, res) => {
+    if (!req.user) throw ApiError.unauthorized();
+    await reportService.remove(req.params.id, req.user.id);
+    ok(res, { deleted: true });
+  }),
 };

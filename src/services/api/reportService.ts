@@ -26,4 +26,8 @@ export const reportService = {
     const { data } = await apiClient.get<InvestmentReport>(`/reports/${id}`);
     return data;
   },
+
+  async remove(id: string): Promise<void> {
+    await apiClient.delete(`/reports/${id}`);
+  },
 };
