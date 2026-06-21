@@ -4,11 +4,16 @@
 
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import * as Linking from 'expo-linking';
 import { Screen } from '../components/common/Screen';
 import { InlineLoader } from '../components/common/Loader';
 import { AppText } from '../components/common/Text';
+import { Button } from '../components/common/Button';
+import { useTheme } from '../theme/ThemeProvider';
+import { fonts } from '../theme/theme';
 import { requireSupabase } from '../services/supabase/supabaseClient';
 import { tokenStore } from '../services/api/tokenStore';
 import { authService } from '../services/api/authService';
@@ -16,8 +21,11 @@ import { useAuthStore } from '../store/authStore';
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const c = theme.colors;
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ code?: string; access_token?: string; refresh_token?: string }>();
-  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -70,22 +78,30 @@ export default function AuthCallbackScreen() {
         const user = await authService.me();
         useAuthStore.setState({ status: 'authenticated', user, error: null });
         router.replace('/');
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Authentication failed';
-        setErrMsg(msg);
-        setTimeout(() => router.replace('/login'), 2500);
+      } catch {
+        setFailed(true);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <Screen>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 }}>
-        {errMsg ? (
-          <AppText color="danger" center>{errMsg}</AppText>
+    <Screen padded>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        {failed ? (
+          <>
+            <View style={{ width: 66, height: 66, borderRadius: 33, backgroundColor: c.secondaryMuted, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="logo-google" size={30} color={c.secondary} />
+            </View>
+            <AppText style={{ fontFamily: fonts.serif, fontSize: 21 }} center>{t('auth.googleFailedTitle')}</AppText>
+            <AppText color="textMuted" center>{t('auth.googleFailedBody')}</AppText>
+            <Button label={t('auth.signIn')} onPress={() => router.replace('/login')} fullWidth={false} style={{ marginTop: 4 }} />
+          </>
         ) : (
-          <InlineLoader />
+          <>
+            <InlineLoader />
+            <AppText color="textMuted">{t('auth.completingSignIn')}</AppText>
+          </>
         )}
       </View>
     </Screen>

@@ -32,7 +32,7 @@ function useAuthGate() {
 
     // Authenticated. Admins live ONLY in the admin area; investors never see it.
     if (role === 'admin') {
-      if (root !== 'admin' && root !== 'auth-callback') router.replace('/admin');
+      if (root !== 'admin' && root !== 'auth-callback' && root !== 'notifications') router.replace('/admin');
     } else if (root === 'admin' || root === 'login' || root === 'register') {
       router.replace('/home');
     }

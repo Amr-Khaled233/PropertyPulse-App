@@ -3,7 +3,7 @@
 
 export type InquiryKind = 'buyer_inquiry' | 'viewing_request' | 'contact_message' | 'application';
 
-export type InquiryStatus = 'new' | 'in_progress' | 'closed';
+export type InquiryStatus = 'new' | 'in_progress' | 'closed' | 'deleted';
 
 export interface Inquiry {
   id: string;

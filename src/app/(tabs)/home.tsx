@@ -1,7 +1,7 @@
 // Dashboard — portfolio metrics computed from the user's watchlist via the
 // shared financial engine (so mobile and web numbers agree). Matches the web.
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View, Pressable } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +17,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { fonts, radius } from '../../theme/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useWatchlistStore } from '../../store/watchlistStore';
-import { inquiryService } from '../../services/api/inquiryService';
-import { notifCache } from '../../services/api/notifCache';
+import { getFeed, countUnseen } from '../../services/api/notifFeed';
 import { buildAssumptions, computeInvestmentMetrics, estimateMonthlyRent, deriveRecommendation, type Recommendation } from '../../utils/financial';
 import { formatCompact } from '../../utils/formatters';
 import { displayTitle } from '../../utils/propertyTitle';
@@ -44,15 +43,24 @@ export default function HomeScreen() {
 
   // Reload the watchlist + unread badge whenever the dashboard regains focus,
   // so headline numbers update live as properties are added/removed.
+  const refreshBadge = useCallback(() => {
+    getFeed('investor')
+      .then(async (items) => setNotifCount(await countUnseen(items, 'investor')))
+      .catch(() => {});
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       void loadWatch();
-      inquiryService
-        .getMyInquiries()
-        .then(async (list) => setNotifCount(await notifCache.countUnseen(list)))
-        .catch(() => {});
-    }, [loadWatch]),
+      refreshBadge();
+    }, [loadWatch, refreshBadge]),
   );
+
+  // Poll the unread badge every 60s while the dashboard is mounted.
+  useEffect(() => {
+    const id = setInterval(refreshBadge, 60000);
+    return () => clearInterval(id);
+  }, [refreshBadge]);
 
   const computed = useMemo(
     () =>

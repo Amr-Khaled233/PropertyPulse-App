@@ -21,7 +21,7 @@ import { useUiStore } from '../../store/uiStore';
 import { applyLanguage } from '../../i18';
 import { propertyService } from '../../services/api/propertyService';
 import { adminService } from '../../services/api/adminService';
-import { adminNotifCache } from '../../services/api/adminNotifCache';
+import { getFeed, countUnseen } from '../../services/api/notifFeed';
 import { formatCompactCurrency } from '../../utils/formatters';
 import type { Property } from '../../types/listing';
 import type { Inquiry, InquiryStatus } from '../../types/inquiry';
@@ -29,7 +29,7 @@ import type { UserProfile, PlanTier } from '../../types/user';
 
 type Tab = 'properties' | 'inquiries' | 'users';
 const STATUSES: InquiryStatus[] = ['new', 'in_progress', 'closed'];
-const STATUS_LABEL: Record<InquiryStatus, string> = { new: 'New', in_progress: 'In Progress', closed: 'Closed' };
+const STATUS_LABEL: Record<InquiryStatus, string> = { new: 'New', in_progress: 'In Progress', closed: 'Closed', deleted: 'Deleted' };
 
 export default function AdminScreen() {
   const { theme, isDark, setPreference } = useTheme();
@@ -66,22 +66,11 @@ export default function AdminScreen() {
 
   const refreshBadge = useCallback(async () => {
     try {
-      const [inq, usr] = await Promise.all([adminService.listInquiries(), adminService.listUsers()]);
-      setAdminNotif(await adminNotifCache.unseenCount(inq.map((i) => i.id), usr.map((u) => u.id)));
+      setAdminNotif(await countUnseen(await getFeed('admin'), 'admin'));
     } catch {
       /* badge is best-effort */
     }
   }, []);
-
-  async function clearBadge() {
-    try {
-      const [inq, usr] = await Promise.all([adminService.listInquiries(), adminService.listUsers()]);
-      await adminNotifCache.markAllSeen(inq.map((i) => i.id), usr.map((u) => u.id));
-    } catch {
-      /* ignore */
-    }
-    setAdminNotif(0);
-  }
 
   const loadProperties = useCallback(async () => {
     setLoading(true);
@@ -89,22 +78,12 @@ export default function AdminScreen() {
   }, []);
   const loadInquiries = useCallback(async () => {
     setLoading(true);
-    try {
-      const list = await adminService.listInquiries();
-      setInquiries(list);
-      await adminNotifCache.markInquiriesSeen(list.map((i) => i.id));
-      void refreshBadge();
-    } catch { setInquiries([]); } finally { setLoading(false); }
-  }, [refreshBadge]);
+    try { setInquiries(await adminService.listInquiries()); } catch { setInquiries([]); } finally { setLoading(false); }
+  }, []);
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    try {
-      const list = await adminService.listUsers();
-      setUsers(list);
-      await adminNotifCache.markUsersSeen(list.map((u) => u.id));
-      void refreshBadge();
-    } catch { setUsers([]); } finally { setLoading(false); }
-  }, [refreshBadge]);
+    try { setUsers(await adminService.listUsers()); } catch { setUsers([]); } finally { setLoading(false); }
+  }, []);
 
   useEffect(() => {
     if (tab === 'properties') void loadProperties();
@@ -112,7 +91,11 @@ export default function AdminScreen() {
     else void loadUsers();
   }, [tab, loadProperties, loadInquiries, loadUsers]);
 
-  useEffect(() => { void refreshBadge(); }, [refreshBadge]);
+  useEffect(() => {
+    void refreshBadge();
+    const id = setInterval(() => void refreshBadge(), 60000);
+    return () => clearInterval(id);
+  }, [refreshBadge]);
 
   function deleteProperty(p: Property) {
     Alert.alert(t('admin.deleteTitle'), p.title, [
@@ -171,14 +154,14 @@ export default function AdminScreen() {
     );
   }
 
-  const tones: Record<InquiryStatus, 'warning' | 'info' | 'success'> = { new: 'warning', in_progress: 'info', closed: 'success' };
+  const tones: Record<InquiryStatus, 'warning' | 'info' | 'success' | 'danger'> = { new: 'warning', in_progress: 'info', closed: 'success', deleted: 'danger' };
 
   return (
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 }}>
         <AppText style={{ fontFamily: fonts.serif, fontSize: 22 }}>{t('admin.title')}</AppText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-          <Pressable onPress={() => { void clearBadge(); setTab('inquiries'); }} hitSlop={8} style={{ position: 'relative' }}>
+          <Pressable onPress={() => router.push('/notifications')} hitSlop={8} style={{ position: 'relative' }}>
             <Ionicons name="notifications-outline" size={20} color={c.textSecondary} />
             {adminNotif > 0 && (
               <View style={{ position: 'absolute', top: -4, right: -5, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: c.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>

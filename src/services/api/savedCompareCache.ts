@@ -1,33 +1,41 @@
-// Saved AI comparisons — persisted on-device (AsyncStorage). Stores the compared
-// property ids + a snapshot label so the user can re-open a comparison later.
+// Saved AI comparisons — the FULL result is persisted on-device (AsyncStorage)
+// so a saved comparison can be re-opened as a read-only snapshot WITHOUT
+// re-running the AI compare.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { ComparisonResult } from './analysisService';
 
 const KEY = 'saved_compares';
 
 export interface SavedCompare {
   id: string;
-  ids: string; // comma-separated property ids (re-run via /compare?ids=)
-  titles: string[];
-  verdict: string;
   savedAt: string;
+  result: ComparisonResult;
 }
+
+const idKey = (r: ComparisonResult) => r.candidates.map((c) => c.property.id).sort().join(',');
 
 export const savedCompareCache = {
   async list(): Promise<SavedCompare[]> {
     try {
       const raw = await AsyncStorage.getItem(KEY);
-      return raw ? (JSON.parse(raw) as SavedCompare[]) : [];
+      const arr = raw ? (JSON.parse(raw) as SavedCompare[]) : [];
+      // Drop legacy entries saved before the full-result format (no candidates).
+      return arr.filter((x) => x && x.result && Array.isArray(x.result.candidates));
     } catch {
       return [];
     }
   },
 
-  async save(item: Omit<SavedCompare, 'id' | 'savedAt'>): Promise<void> {
+  async getById(id: string): Promise<SavedCompare | undefined> {
+    return (await this.list()).find((x) => x.id === id);
+  },
+
+  async save(result: ComparisonResult): Promise<void> {
     const list = await this.list();
-    const entry: SavedCompare = { ...item, id: `cmp_${Date.now().toString(36)}`, savedAt: new Date().toISOString() };
-    // De-dupe by the same set of ids (keep the newest).
-    const deduped = list.filter((x) => x.ids !== item.ids);
+    const entry: SavedCompare = { id: `cmp_${Date.now().toString(36)}`, savedAt: new Date().toISOString(), result };
+    // De-dupe by the same set of compared properties (keep the newest snapshot).
+    const deduped = list.filter((x) => idKey(x.result) !== idKey(result));
     await AsyncStorage.setItem(KEY, JSON.stringify([entry, ...deduped]));
   },
 

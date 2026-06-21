@@ -13,6 +13,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { fonts } from '../theme/theme';
 import { savedCompareCache, type SavedCompare } from '../services/api/savedCompareCache';
 import { formatDate } from '../utils/formatters';
+import { displayTitle } from '../utils/propertyTitle';
 
 export default function SavedComparesScreen() {
   const { theme } = useTheme();
@@ -57,21 +58,24 @@ export default function SavedComparesScreen() {
             <AppText color="textMuted" center>{t('compare.savedEmpty')}</AppText>
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/compare?ids=${item.ids}`)}>
-            <Card>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <AppText style={{ fontFamily: fonts.semibold, flex: 1 }}>{t('compare.properties', { count: item.titles.length })}</AppText>
-                <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={20} color={c.danger} />
-                </Pressable>
-              </View>
-              <AppText variant="caption" color="textMuted" numberOfLines={1}>{item.titles.join(' · ')}</AppText>
-              <AppText color="textSecondary" numberOfLines={2} style={{ marginTop: 8, lineHeight: 20 }}>{item.verdict}</AppText>
-              <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{formatDate(item.savedAt)}</AppText>
-            </Card>
-          </Pressable>
-        )}
+        renderItem={({ item }) => {
+          const titles = item.result.candidates.map((cn) => displayTitle(cn.property));
+          return (
+            <Pressable onPress={() => router.push(`/compare?saved=${item.id}`)}>
+              <Card>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <AppText style={{ fontFamily: fonts.semibold, flex: 1 }}>{t('compare.properties', { count: titles.length })}</AppText>
+                  <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={20} color={c.danger} />
+                  </Pressable>
+                </View>
+                <AppText variant="caption" color="textMuted" numberOfLines={1}>{titles.join(' · ')}</AppText>
+                <AppText color="textSecondary" numberOfLines={2} style={{ marginTop: 8, lineHeight: 20 }}>{item.result.verdict}</AppText>
+                <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{formatDate(item.savedAt)}</AppText>
+              </Card>
+            </Pressable>
+          );
+        }}
       />
     </Screen>
   );

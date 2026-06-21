@@ -31,7 +31,7 @@ function cleanText(text: string, candidates: ComparisonCandidate[]): string {
 }
 
 export default function CompareScreen() {
-  const { ids } = useLocalSearchParams<{ ids: string }>();
+  const { ids, saved: savedId } = useLocalSearchParams<{ ids?: string; saved?: string }>();
   const { theme } = useTheme();
   const c = theme.colors;
   const { t } = useTranslation();
@@ -48,11 +48,7 @@ export default function CompareScreen() {
   async function onSave() {
     if (!result) return;
     try {
-      await savedCompareCache.save({
-        ids: propertyIds.join(','),
-        titles: result.candidates.map((cn) => displayTitle(cn.property)),
-        verdict: cleanText(result.verdict, result.candidates),
-      });
+      await savedCompareCache.save(result);
       setSaved(true);
     } catch {
       /* best-effort */
@@ -72,7 +68,18 @@ export default function CompareScreen() {
     }
   }
 
-  useEffect(() => { void run(); /* eslint-disable-next-line */ }, [ids]);
+  useEffect(() => {
+    // A saved comparison opens as a read-only snapshot — never re-runs the AI.
+    if (savedId) {
+      savedCompareCache.getById(savedId).then((s) => {
+        if (s) { setResult(s.result); setSaved(true); }
+        setLoading(false);
+      });
+    } else {
+      void run();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids, savedId]);
 
   const rankOf = (id: string) => result?.ranking?.find((r) => r.propertyId === id)?.rank;
 
@@ -105,13 +112,15 @@ export default function CompareScreen() {
               <AppText style={{ color: c.textOnInverse, marginTop: 6, lineHeight: 22 }}>{cleanText(result.verdict, result.candidates)}</AppText>
             </Card>
 
-            <Button
-              label={saved ? t('compare.saved') : t('compare.save')}
-              icon={saved ? 'checkmark' : 'bookmark-outline'}
-              variant="outlined"
-              onPress={onSave}
-              disabled={saved}
-            />
+            {!savedId && (
+              <Button
+                label={saved ? t('compare.saved') : t('compare.save')}
+                icon={saved ? 'checkmark' : 'bookmark-outline'}
+                variant="outlined"
+                onPress={onSave}
+                disabled={saved}
+              />
+            )}
 
             {[...result.candidates]
               .sort((a, b) => (rankOf(a.property.id) ?? 99) - (rankOf(b.property.id) ?? 99))
