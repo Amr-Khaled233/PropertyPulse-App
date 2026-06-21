@@ -15,13 +15,16 @@ interface InquiryRow {
   message: string | null;
   property_id: string | null;
   created_at: string;
+  deleted_at: string | null;
 }
 
 function toInquiry(row: InquiryRow): Inquiry {
   return {
     id: row.id,
     kind: row.kind,
-    status: row.status,
+    // A soft-deleted inquiry surfaces as status 'deleted' (the DB status enum
+    // itself stays new/in_progress/closed; deletion lives in deleted_at).
+    status: row.deleted_at ? 'deleted' : row.status,
     name: row.name,
     email: row.email ?? undefined,
     phone: row.phone ?? undefined,
@@ -45,6 +48,7 @@ export const adminRepository = {
     const { data, error } = await supabase
       .from('inquiries')
       .select('*')
+      .is('deleted_at', null) // admins don't see soft-deleted inquiries
       .order('created_at', { ascending: false });
     if (error) throw new ApiError(500, 'INQUIRIES_FETCH_FAILED', error.message);
     return (data as InquiryRow[]).map(toInquiry);
@@ -96,7 +100,8 @@ export const adminRepository = {
   },
 
   async deleteInquiry(id: string): Promise<void> {
-    const { error } = await supabase.from('inquiries').delete().eq('id', id);
+    // Soft delete — the submitter still sees it (as 'deleted') in /inquiries/my.
+    const { error } = await supabase.from('inquiries').update({ deleted_at: new Date().toISOString() }).eq('id', id);
     if (error) throw new ApiError(500, 'INQUIRY_DELETE_FAILED', error.message);
   },
 };
