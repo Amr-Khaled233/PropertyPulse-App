@@ -11,7 +11,7 @@ import { Card } from '../components/common/Card';
 import { ScreenHeader } from '../components/common/Brand';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts } from '../theme/theme';
-import { savedCompareCache, type SavedCompare } from '../services/api/savedCompareCache';
+import { savedCompareService, type SavedCompare } from '../services/api/savedCompareService';
 import { formatDate } from '../utils/formatters';
 import { displayTitle } from '../utils/propertyTitle';
 
@@ -23,7 +23,7 @@ export default function SavedComparesScreen() {
   const [items, setItems] = useState<SavedCompare[]>([]);
 
   const load = useCallback(async () => {
-    setItems(await savedCompareCache.list());
+    setItems(await savedCompareService.list());
   }, []);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -36,7 +36,7 @@ export default function SavedComparesScreen() {
         style: 'destructive',
         onPress: async () => {
           setItems((p) => p.filter((x) => x.id !== item.id));
-          await savedCompareCache.remove(item.id);
+          await savedCompareService.remove(item.id);
         },
       },
     ]);
@@ -71,7 +71,7 @@ export default function SavedComparesScreen() {
                 </View>
                 <AppText variant="caption" color="textMuted" numberOfLines={1}>{titles.join(' · ')}</AppText>
                 <AppText color="textSecondary" numberOfLines={2} style={{ marginTop: 8, lineHeight: 20 }}>{item.result.verdict}</AppText>
-                <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{formatDate(item.savedAt)}</AppText>
+                <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{formatDate(item.createdAt)}</AppText>
               </Card>
             </Pressable>
           );

@@ -18,7 +18,7 @@ import { useUiStore } from '../store/uiStore';
 import { analysisService, type ComparisonResult } from '../services/api/analysisService';
 import { formatCompactCurrency, formatPct } from '../utils/formatters';
 import { displayTitle } from '../utils/propertyTitle';
-import { savedCompareCache } from '../services/api/savedCompareCache';
+import { savedCompareService } from '../services/api/savedCompareService';
 
 function cleanText(text: string, candidates: ComparisonCandidate[]): string {
   let t = text;
@@ -48,7 +48,7 @@ export default function CompareScreen() {
   async function onSave() {
     if (!result) return;
     try {
-      await savedCompareCache.save(result);
+      await savedCompareService.save(result);
       setSaved(true);
     } catch {
       /* best-effort */
@@ -71,7 +71,7 @@ export default function CompareScreen() {
   useEffect(() => {
     // A saved comparison opens as a read-only snapshot — never re-runs the AI.
     if (savedId) {
-      savedCompareCache.getById(savedId).then((s) => {
+      savedCompareService.getById(savedId).then((s) => {
         if (s) { setResult(s.result); setSaved(true); }
         setLoading(false);
       });
