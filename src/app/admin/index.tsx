@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/common/Screen';
 import { AppText } from '../../components/common/Text';
@@ -92,10 +92,13 @@ export default function AdminScreen() {
   }, [tab, loadProperties, loadInquiries, loadUsers]);
 
   useEffect(() => {
-    void refreshBadge();
     const id = setInterval(() => void refreshBadge(), 60000);
     return () => clearInterval(id);
   }, [refreshBadge]);
+
+  // Recompute the bell badge each time the dashboard regains focus — e.g. after
+  // viewing the notifications screen (which marks items seen) so the dot clears.
+  useFocusEffect(useCallback(() => { void refreshBadge(); }, [refreshBadge]));
 
   function deleteProperty(p: Property) {
     Alert.alert(t('admin.deleteTitle'), p.title, [
