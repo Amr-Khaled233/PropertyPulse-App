@@ -28,14 +28,35 @@ export default function AuthCallbackScreen() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    const sb = requireSupabase();
+    let done = false;
+
+    // Complete sign-in from whatever source produces a session first.
+    async function finish(session: { access_token: string; refresh_token: string }) {
+      if (done) return;
+      done = true;
+      try {
+        await tokenStore.set(session.access_token, session.refresh_token);
+        const user = await authService.me();
+        useAuthStore.setState({ status: 'authenticated', user, error: null });
+        router.replace('/');
+      } catch {
+        done = false; // let another source retry
+      }
+    }
+
+    // 1) The moment Supabase establishes a session (deep link), go straight in.
+    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
+      if (session) void finish(session);
+    });
+
+    // 2) Also try to complete the flow ourselves from the callback URL.
     (async () => {
       try {
-        // Expo Router passes query params via useLocalSearchParams (PKCE flow).
         let code = typeof params.code === 'string' ? params.code : null;
         let access_token = typeof params.access_token === 'string' ? params.access_token : null;
         let refresh_token = typeof params.refresh_token === 'string' ? params.refresh_token : null;
 
-        // Fall back to parsing the raw deep-link URL for hash-based implicit tokens.
         if (!code && !access_token) {
           const url = await Linking.getInitialURL();
           if (url) {
@@ -48,8 +69,7 @@ export default function AuthCallbackScreen() {
             } catch {
               const qIdx = url.indexOf('?');
               const hIdx = url.indexOf('#');
-              if (qIdx !== -1)
-                code = new URLSearchParams(url.slice(qIdx + 1, hIdx !== -1 ? hIdx : undefined)).get('code');
+              if (qIdx !== -1) code = new URLSearchParams(url.slice(qIdx + 1, hIdx !== -1 ? hIdx : undefined)).get('code');
               if (hIdx !== -1) {
                 const hp = new URLSearchParams(url.slice(hIdx + 1));
                 access_token = hp.get('access_token');
@@ -59,29 +79,29 @@ export default function AuthCallbackScreen() {
           }
         }
 
-        const sb = requireSupabase();
-        let session = null;
-
         if (code) {
-          const { data, error } = await sb.auth.exchangeCodeForSession(code);
-          if (error || !data.session) throw error ?? new Error('Code exchange failed');
-          session = data.session;
+          const { data } = await sb.auth.exchangeCodeForSession(code);
+          if (data.session) await finish(data.session);
         } else if (access_token && refresh_token) {
-          const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
-          if (error || !data.session) throw error ?? new Error('Session setup failed');
-          session = data.session;
-        } else {
-          throw new Error('No credentials found in the callback URL.');
+          const { data } = await sb.auth.setSession({ access_token, refresh_token });
+          if (data.session) await finish(data.session);
         }
-
-        await tokenStore.set(session.access_token, session.refresh_token);
-        const user = await authService.me();
-        useAuthStore.setState({ status: 'authenticated', user, error: null });
-        router.replace('/');
       } catch {
-        setFailed(true);
+        /* ignore — onAuthStateChange / an existing session may still complete it */
       }
+
+      // 3) Maybe a session already exists.
+      const { data } = await sb.auth.getSession();
+      if (data.session) await finish(data.session);
     })();
+
+    // 4) Only show the failure screen if NOTHING signed us in within the window.
+    const timer = setTimeout(() => { if (!done) setFailed(true); }, 9000);
+
+    return () => {
+      sub.subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
