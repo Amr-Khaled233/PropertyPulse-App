@@ -39,7 +39,7 @@ export function Input({ label, error, icon, password, multiline, style, ...rest 
             name={icon}
             size={18}
             color={c.textMuted}
-            style={multiline ? { marginTop: 2 } : undefined}
+            style={multiline ? { marginTop: 1 } : undefined}
           />
         )}
         <TextInput
@@ -56,7 +56,11 @@ export function Input({ label, error, icon, password, multiline, style, ...rest 
               color: c.text,
               fontFamily: fonts.body,
               fontSize: 15,
-              ...(multiline ? { minHeight: 72 } : { height: '100%' }),
+              lineHeight: 20,
+              // Strip Android's extra top font padding so the first text line
+              // sits level with the leading icon in multiline fields.
+              includeFontPadding: false,
+              ...(multiline ? { minHeight: 72, paddingTop: 0, paddingBottom: 0 } : { height: '100%' }),
             },
             style,
           ]}

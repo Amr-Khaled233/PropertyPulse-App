@@ -45,7 +45,6 @@ export const adminRepository = {
     const { data, error } = await supabase
       .from('inquiries')
       .select('*')
-      .neq('status', 'deleted')
       .order('created_at', { ascending: false });
     if (error) throw new ApiError(500, 'INQUIRIES_FETCH_FAILED', error.message);
     return (data as InquiryRow[]).map(toInquiry);
@@ -97,8 +96,7 @@ export const adminRepository = {
   },
 
   async deleteInquiry(id: string): Promise<void> {
-    // Soft delete — mark as 'deleted' so the submitter still sees it was removed.
-    const { error } = await supabase.from('inquiries').update({ status: 'deleted' }).eq('id', id);
+    const { error } = await supabase.from('inquiries').delete().eq('id', id);
     if (error) throw new ApiError(500, 'INQUIRY_DELETE_FAILED', error.message);
   },
 };
