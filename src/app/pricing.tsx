@@ -31,11 +31,6 @@ interface Plan {
   popular?: boolean;
 }
 
-const PLANS: Plan[] = [
-  { id: 'free', tier: 'Base', name: 'Free', price: 0, cadence: 'Forever free', features: ['Basic search', '2 AI reports / month', '1 AI comparison / month', 'Limited market data'] },
-  { id: 'pro', tier: 'Elevate', name: 'Pro', price: 850, cadence: 'per month', popular: true, features: ['Unlimited AI reports', 'Full AI advisor', 'Real-time trends', 'Portfolio tools'] },
-];
-
 export default function PricingScreen() {
   const { theme } = useTheme();
   const c = theme.colors;
@@ -44,6 +39,12 @@ export default function PricingScreen() {
   const user = useAuthStore((s) => s.user);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const currentPlan: PlanId = (user?.plan as PlanId) ?? 'free';
+
+  // Plans are rebuilt from the active language so names/features/cadence localize.
+  const PLANS: Plan[] = [
+    { id: 'free', tier: t('pricing.freeTier'), name: t('plan.free'), price: 0, cadence: t('pricing.freeCadence'), features: t('pricing.freeFeatures', { returnObjects: true }) as string[] },
+    { id: 'pro', tier: t('pricing.proTier'), name: t('plan.pro'), price: 850, cadence: t('pricing.proCadence'), popular: true, features: t('pricing.proFeatures', { returnObjects: true }) as string[] },
+  ];
 
   const [selectedId, setSelectedId] = useState<PlanId>('pro');
   const [processing, setProcessing] = useState(false);

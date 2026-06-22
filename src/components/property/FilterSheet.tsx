@@ -69,7 +69,7 @@ export function FilterSheet({ visible, filters, towns, availableTypes, onApply, 
           <Group label={t('search.type')}>
             <Chip label={t('search.allTypes')} selected={!draft.type} onPress={() => patch({ type: undefined })} />
             {types.map((ty) => (
-              <Chip key={ty} label={ty} selected={draft.type === ty} onPress={() => patch({ type: ty })} />
+              <Chip key={ty} label={t(`propertyType.${ty}`)} selected={draft.type === ty} onPress={() => patch({ type: ty })} />
             ))}
           </Group>
 

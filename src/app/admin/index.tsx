@@ -288,7 +288,7 @@ export default function AdminScreen() {
                   <AppText style={{ fontFamily: fonts.semibold }}>{item.fullName ?? item.email}</AppText>
                   <AppText variant="caption" color="textMuted">{item.email}</AppText>
                 </View>
-                <Badge label={item.role} tone={item.role === 'admin' ? 'success' : 'neutral'} />
+                <Badge label={t(`role.${item.role}`)} tone={item.role === 'admin' ? 'success' : 'neutral'} />
               </View>
               <View style={{ height: 1, backgroundColor: c.border, marginVertical: 10 }} />
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -302,7 +302,7 @@ export default function AdminScreen() {
                         onPress={() => changePlan(item, pl)}
                         style={{ paddingHorizontal: 14, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: active ? c.secondary : c.border, backgroundColor: active ? c.secondary : 'transparent' }}
                       >
-                        <AppText style={{ fontFamily: fonts.semibold, fontSize: 12, color: active ? '#fff' : c.textSecondary }}>{pl.toUpperCase()}</AppText>
+                        <AppText style={{ fontFamily: fonts.semibold, fontSize: 12, color: active ? '#fff' : c.textSecondary }}>{t(`plan.${pl}`)}</AppText>
                       </Pressable>
                     );
                   })}

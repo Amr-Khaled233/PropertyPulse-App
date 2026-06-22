@@ -2,7 +2,7 @@
 // shared financial engine (so mobile and web numbers agree). Matches the web.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View, Pressable } from 'react-native';
+import { I18nManager, RefreshControl, ScrollView, View, Pressable } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -88,7 +88,7 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [loadWatch]);
 
-  const planLabel = (user?.plan ?? 'free').toUpperCase();
+  const planLabel = t(`plan.${user?.plan ?? 'free'}`).toUpperCase();
   const isPro = (user?.plan ?? 'free') !== 'free';
 
   return (
@@ -128,7 +128,7 @@ export default function HomeScreen() {
                 <AppText style={{ fontFamily: fonts.semibold, fontSize: 15 }}>{t('home.aiInsight')}</AppText>
                 <AppText variant="caption" color="textMuted" numberOfLines={2}>{t('home.aiInsightBody')}</AppText>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={c.textMuted} />
+              <Ionicons name="chevron-forward" size={20} color={c.textMuted} style={{ transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] }} />
             </View>
           </Card>
         </Pressable>

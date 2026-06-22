@@ -1,5 +1,5 @@
 import { Pressable, View, type ViewStyle } from 'react-native';
-// import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { fonts } from '../../theme/theme';
 import { AppText } from './Text';
@@ -14,7 +14,7 @@ export function SectionHeader({
   accent?: boolean;
 }) {
   const { theme } = useTheme();
-//   const { t } = useTranslation();
+  const { t } = useTranslation();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
       <AppText
@@ -29,7 +29,7 @@ export function SectionHeader({
       {onSeeAll && (
         <Pressable onPress={onSeeAll} hitSlop={8}>
           <AppText variant="label" color="secondary">
-            {/* {t('common.seeAll')} */}
+            {t('common.seeAll')}
           </AppText>
         </Pressable>
       )}

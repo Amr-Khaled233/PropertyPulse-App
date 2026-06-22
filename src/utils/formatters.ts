@@ -1,3 +1,5 @@
+import { i18n } from '../i18';
+
 export function formatCurrency(value: number, currency = 'EGP'): string {
   return `${value.toLocaleString()} ${currency}`;
 }
@@ -42,15 +44,27 @@ export function formatCompactCurrency(value: number, currency = 'EGP'): string {
   return formatCompact(value, currency);
 }
 
-/** "3 bed · 2 bath · 120 m²" style summary line. */
+/** "3 bed · 2 bath · 120 m²" style summary line (unit labels localized). */
 export function formatPropertySpecs(bedrooms: number, bathrooms: number, areaSqm: number): string {
-  return `${bedrooms} bed · ${bathrooms} bath · ${areaSqm.toLocaleString()} m²`;
+  return `${bedrooms} ${i18n.t('unit.bed')} · ${bathrooms} ${i18n.t('unit.bath')} · ${areaSqm.toLocaleString()} ${i18n.t('unit.sqm')}`;
 }
 
 /** Years value that may be Infinity / null (never breaks even). */
 export function formatYears(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return '—';
-  return `${value.toFixed(1)} yrs`;
+  return `${value.toFixed(1)} ${i18n.t('unit.yrs')}`;
+}
+
+/**
+ * Localized short month label for chart axes, e.g. "May 26" / "مايو 26".
+ * Accepts an ISO-ish period ("2026-05" or "2026-05-01"). Numbers stay Latin
+ * so they read correctly inside an RTL Arabic label.
+ */
+export function formatMonthShort(period: string): string {
+  const d = new Date(period.length === 7 ? `${period}-01` : period);
+  if (Number.isNaN(d.getTime())) return period.slice(0, 7);
+  const locale = i18n.language === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US';
+  return d.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
 }
 
 /** Whole-number percent, e.g. 7.4 → "7.4%". */

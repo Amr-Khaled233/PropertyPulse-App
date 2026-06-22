@@ -16,6 +16,7 @@ import { InquiryModal } from '../../components/property/InquiryModal';
 import { useTheme } from '../../theme/ThemeProvider';
 import { fonts, radius } from '../../theme/theme';
 import { useWatchlistStore } from '../../store/watchlistStore';
+import { useUiStore } from '../../store/uiStore';
 import { propertyService } from '../../services/api/propertyService';
 import { propertyImage } from '../../utils/propertyImages';
 import { displayTitle } from '../../utils/propertyTitle';
@@ -29,6 +30,7 @@ export default function PropertyDetailScreen() {
   const c = theme.colors;
   const { t } = useTranslation();
   const router = useRouter();
+  const lang = useUiStore((s) => s.language);
 
   const isWatched = useWatchlistStore((s) => s.entries.some((e) => e.propertyId === id));
   const toggleWatch = useWatchlistStore((s) => s.toggle);
@@ -40,12 +42,13 @@ export default function PropertyDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
+    setLoading(true);
     propertyService
-      .getById(id)
+      .getById(id, lang)
       .then(setProperty)
       .catch((e) => setError(e instanceof Error ? e.message : 'Not found'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, lang]);
 
   const metrics = useMemo(() => {
     if (!property) return null;

@@ -43,8 +43,8 @@ export default function AnalysisScreen() {
   const [reportError, setReportError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) propertyService.getById(id).then(setProperty).catch(() => {});
-  }, [id]);
+    if (id) propertyService.getById(id, lang).then(setProperty).catch(() => {});
+  }, [id, lang]);
 
   async function genReport() {
     if (!id) return;

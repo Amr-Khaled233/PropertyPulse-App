@@ -142,7 +142,7 @@ export default function CompareScreen() {
                           <AppText numberOfLines={1} style={{ fontFamily: fonts.semibold, fontSize: 15, flex: 1 }}>{displayTitle(cand.property)}</AppText>
                         </View>
                       </View>
-                      <Badge label={cand.recommendation} tone={cand.recommendation === 'buy' ? 'success' : cand.recommendation === 'avoid' ? 'danger' : 'warning'} solid />
+                      <Badge label={t(`report.${cand.recommendation}`).toUpperCase()} tone={cand.recommendation === 'buy' ? 'success' : cand.recommendation === 'avoid' ? 'danger' : 'warning'} solid />
                     </View>
 
                     {/* Price + property meta */}
@@ -153,7 +153,7 @@ export default function CompareScreen() {
                       {cand.property.type && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                           <Ionicons name="home-outline" size={12} color={c.textMuted} />
-                          <AppText variant="caption" color="textMuted" style={{ textTransform: 'capitalize' }}>{cand.property.type.replace(/_/g, ' ')}</AppText>
+                          <AppText variant="caption" color="textMuted">{t(`propertyType.${cand.property.type}`)}</AppText>
                         </View>
                       )}
                       {cand.property.areaSqm > 0 && (
@@ -165,7 +165,7 @@ export default function CompareScreen() {
                       {cand.property.bedrooms > 0 && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                           <Ionicons name="bed-outline" size={12} color={c.textMuted} />
-                          <AppText variant="caption" color="textMuted">{cand.property.bedrooms} bed</AppText>
+                          <AppText variant="caption" color="textMuted">{cand.property.bedrooms} {t('unit.bed')}</AppText>
                         </View>
                       )}
                       {cand.property.address?.city && (
@@ -189,7 +189,7 @@ export default function CompareScreen() {
                       <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.border, gap: 8 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="bulb-outline" size={14} color={c.secondary} />
-                          <AppText variant="label" color="secondary">AI Reasoning</AppText>
+                          <AppText variant="label" color="secondary">{t('compare.reasoning')}</AppText>
                         </View>
                         {cleanText(rationale, result.candidates)
                           .split(/\n|(?<=\.\s)/)

@@ -8,7 +8,7 @@ import { fonts, radius } from '../../theme/theme';
 import { AppText } from '../common/Text';
 import { Card } from '../common/Card';
 import { LineChartCard } from '../Chart';
-import { formatPct, formatYears, formatCompact } from '../../utils/formatters';
+import { formatPct, formatYears, formatCompact, formatMonthShort } from '../../utils/formatters';
 import { RISK_COLORS } from '../../utils/financial';
 import type { InvestmentReport } from '../../types/report';
 import type { RiskLevel } from '../../types/analysis';
@@ -81,7 +81,7 @@ export function ReportView({ report }: { report: InvestmentReport }) {
         <Card>
           <LineChartCard
             title={t('report.trend')}
-            labels={report.marketTrends.map((p) => p.period.slice(0, 7))}
+            labels={report.marketTrends.map((p) => formatMonthShort(p.period))}
             data={report.marketTrends.map((p) => p.medianPrice)}
             formatY={(n) => formatCompact(n)}
           />
@@ -114,11 +114,12 @@ function MetricBox({ label, value, c, accent }: { label: string; value: string; 
 }
 
 export function RiskPill({ level, small }: { level: RiskLevel; small?: boolean }) {
+  const { t } = useTranslation();
   const color = RISK_COLORS[level] ?? '#888';
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: `${color}22`, borderRadius: radius.pill, paddingHorizontal: small ? 8 : 12, paddingVertical: small ? 3 : 6 }}>
       <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
-      <AppText style={{ fontFamily: fonts.semibold, fontSize: small ? 11 : 13, color, textTransform: 'capitalize' }}>{level}</AppText>
+      <AppText style={{ fontFamily: fonts.semibold, fontSize: small ? 11 : 13, color }}>{t(`risk.${level}`)}</AppText>
     </View>
   );
 }

@@ -1,6 +1,6 @@
 // Profile — account, appearance (theme), language (RTL), admin, sign out.
 
-import { Alert, ScrollView, View, Pressable } from 'react-native';
+import { Alert, I18nManager, ScrollView, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
               <AppText style={{ fontFamily: fonts.semibold, fontSize: 16 }}>{user?.fullName ?? t('profile.investor')}</AppText>
               <AppText variant="caption" color="textMuted">{user?.email}</AppText>
             </View>
-            <Badge label={user?.plan ?? 'free'} tone={user?.plan && user.plan !== 'free' ? 'success' : 'neutral'} />
+            <Badge label={t(`plan.${user?.plan ?? 'free'}`)} tone={user?.plan && user.plan !== 'free' ? 'success' : 'neutral'} />
           </View>
         </Card>
 
@@ -131,7 +131,7 @@ function LinkRow({ icon, label, onPress, c }: { icon: keyof typeof Ionicons.glyp
     <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
       <Ionicons name={icon} size={20} color={c.secondary} />
       <AppText style={{ flex: 1, fontFamily: fonts.medium }}>{label}</AppText>
-      <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
+      <Ionicons name="chevron-forward" size={18} color={c.textMuted} style={{ transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] }} />
     </Pressable>
   );
 }

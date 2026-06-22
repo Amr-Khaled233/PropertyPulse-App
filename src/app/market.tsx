@@ -13,7 +13,7 @@ import { LineChartCard } from '../components/Chart';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts, radius } from '../theme/theme';
 import { marketService, type MarketOverview } from '../services/api/marketService';
-import { formatCompact } from '../utils/formatters';
+import { formatCompact, formatMonthShort } from '../utils/formatters';
 
 export default function MarketScreen() {
   const { theme } = useTheme();
@@ -64,7 +64,7 @@ export default function MarketScreen() {
           <Card>
             <LineChartCard
               title={t('market.priceTrend')}
-              labels={data.trend.map((p) => p.period.slice(0, 7))}
+              labels={data.trend.map((p) => formatMonthShort(p.period))}
               data={data.trend.map((p) => p.medianPrice)}
               formatY={(n) => formatCompact(n)}
             />
@@ -99,7 +99,7 @@ export default function MarketScreen() {
               {data.byType.map((b) => (
                 <View key={b.type} style={{ gap: 6 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <AppText style={{ fontFamily: fonts.medium, fontSize: 13, textTransform: 'capitalize' }}>{b.type}</AppText>
+                    <AppText style={{ fontFamily: fonts.medium, fontSize: 13 }}>{t(`propertyType.${b.type}`)}</AppText>
                     <AppText variant="caption" color="textMuted">{b.count.toLocaleString()}</AppText>
                   </View>
                   <View style={{ height: 6, borderRadius: 3, backgroundColor: c.surfaceAlt, overflow: 'hidden' }}>

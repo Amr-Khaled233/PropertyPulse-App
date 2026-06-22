@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { I18nManager, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-googl
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
 import { useAuthStore } from '../store/authStore';
 import { useUiStore } from '../store/uiStore';
-import { i18n, applyLanguage } from '../i18';
+import { i18n, applyLanguage, isRTL } from '../i18';
 
 // Public routes reachable without authentication.
 const PUBLIC = new Set(['index', 'landing', 'login', 'register', 'auth-callback']);
@@ -44,7 +44,11 @@ function useAuthGate() {
 function useLanguageSync() {
   const language = useUiStore((s) => s.language);
   useEffect(() => {
-    if (i18n.language !== language) void applyLanguage(language);
+    // Re-apply when the translation language OR the native RTL direction is out
+    // of sync — covers a cold start where persisted Arabic hasn't forced RTL yet.
+    if (i18n.language !== language || I18nManager.isRTL !== isRTL(language)) {
+      void applyLanguage(language);
+    }
   }, [language]);
 }
 

@@ -79,7 +79,7 @@ export default function SearchScreen() {
     const chips: { key: string; label: string; clear: () => void }[] = [];
     if (filters.city) chips.push({ key: 'city', label: filters.city, clear: () => applyPatch({ city: undefined, district: undefined }) });
     if (filters.district) chips.push({ key: 'district', label: filters.district, clear: () => applyPatch({ district: undefined }) });
-    if (filters.type) chips.push({ key: 'type', label: filters.type, clear: () => applyPatch({ type: undefined }) });
+    if (filters.type) chips.push({ key: 'type', label: t(`propertyType.${filters.type}`), clear: () => applyPatch({ type: undefined }) });
     if (filters.bedrooms != null) chips.push({ key: 'beds', label: `${filters.bedrooms}+ ${t('search.beds')}`, clear: () => applyPatch({ bedrooms: undefined }) });
     if (filters.minPrice != null) chips.push({ key: 'min', label: `≥ ${filters.minPrice.toLocaleString()}`, clear: () => applyPatch({ minPrice: undefined }) });
     if (filters.maxPrice != null) chips.push({ key: 'max', label: `≤ ${filters.maxPrice.toLocaleString()}`, clear: () => applyPatch({ maxPrice: undefined }) });

@@ -16,12 +16,14 @@ import { InlineLoader } from '../components/common/Loader';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts } from '../theme/theme';
 import { useAuthStore } from '../store/authStore';
+import { useUiStore } from '../store/uiStore';
 import { getFeed, markSeen, type NotifItem, type NotifRole } from '../services/api/notifFeed';
 import type { InquiryStatus } from '../types/inquiry';
 
-function shortDate(iso: string): string {
+function shortDate(iso: string, lang: 'en' | 'ar'): string {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const locale = lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US';
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export default function NotificationsScreen() {
@@ -29,6 +31,7 @@ export default function NotificationsScreen() {
   const c = theme.colors;
   const { t } = useTranslation();
   const router = useRouter();
+  const lang = useUiStore((s) => s.language);
   const role: NotifRole = useAuthStore((s) => s.user?.role) === 'admin' ? 'admin' : 'investor';
 
   const [items, setItems] = useState<NotifItem[]>([]);
@@ -84,7 +87,7 @@ export default function NotificationsScreen() {
               {it.status === 'deleted' && (
                 <AppText variant="caption" color="danger" style={{ marginTop: 6 }}>{t('notif.removed')}</AppText>
               )}
-              <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{shortDate(it.date)}</AppText>
+              <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{shortDate(it.date, lang)}</AppText>
             </Card>
           ))
         )}

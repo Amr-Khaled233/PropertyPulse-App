@@ -25,8 +25,8 @@ export const propertyService = {
     };
   },
 
-  async getById(id: string): Promise<Property> {
-    const { data } = await apiClient.get<Property>(`/properties/${id}`);
+  async getById(id: string, lang?: 'en' | 'ar'): Promise<Property> {
+    const { data } = await apiClient.get<Property>(`/properties/${id}`, lang ? { lang } : undefined);
     return data;
   },
 
