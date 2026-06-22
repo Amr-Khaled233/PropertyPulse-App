@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeProvider';
 import { radius, fonts, shadow } from '../theme/theme';
 import { AppText } from './common/Text';
@@ -23,6 +24,7 @@ export function PropertyCard({ property, watched, onToggleWatch }: Props) {
   const { theme } = useTheme();
   const c = theme.colors;
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <Pressable
@@ -47,11 +49,11 @@ export function PropertyCard({ property, watched, onToggleWatch }: Props) {
           transition={200}
         />
         <View style={{ position: 'absolute', top: 12, left: 12 }}>
-          <Badge label={property.type} tone="info" solid />
+          <Badge label={t(`propertyType.${property.type}`)} tone="info" solid />
         </View>
         {property.featured && (
           <View style={{ position: 'absolute', top: 12, right: 12 }}>
-            <Badge label="Featured" tone="warning" icon="star" solid />
+            <Badge label={t('admin.featured')} tone="warning" icon="star" solid />
           </View>
         )}
         {onToggleWatch && (
@@ -80,7 +82,7 @@ export function PropertyCard({ property, watched, onToggleWatch }: Props) {
           <AppText style={{ fontFamily: fonts.serif, fontSize: 18 }} color="secondary">
             {formatCompactCurrency(property.price, property.currency)}
           </AppText>
-          <Badge label={property.status === 'for_rent' ? 'For Rent' : 'For Sale'} tone="success" />
+          <Badge label={t(`listingStatus.${property.status}`)} tone="success" />
         </View>
         <AppText numberOfLines={1} style={{ fontFamily: fonts.semibold, fontSize: 14 }}>
           {displayTitle(property)}

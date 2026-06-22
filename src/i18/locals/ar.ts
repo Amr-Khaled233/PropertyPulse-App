@@ -36,6 +36,20 @@ export const ar: TranslationSchema = {
     },
     status: { new: 'جديد', in_progress: 'قيد المعالجة', closed: 'مغلق', deleted: 'محذوف' },
   },
+  propertyType: {
+    apartment: 'شقة',
+    villa: 'فيلا',
+    house: 'منزل',
+    townhouse: 'تاون هاوس',
+    commercial: 'تجاري',
+    land: 'أرض',
+  },
+  listingStatus: {
+    for_sale: 'للبيع',
+    for_rent: 'للإيجار',
+    sold: 'مباع',
+    off_market: 'خارج السوق',
+  },
   auth: {
     welcome: 'أهلاً بعودتك',
     welcomeSub: 'سجّل الدخول إلى لوحة استثماراتك',

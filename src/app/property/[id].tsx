@@ -81,7 +81,7 @@ export default function PropertyDetailScreen() {
             </View>
             <View style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Badge label={property.type} tone="info" solid />
+                <Badge label={t(`propertyType.${property.type}`)} tone="info" solid />
                 <Badge label={property.status === 'for_rent' ? t('common.forRent') : t('common.forSale')} tone="success" solid />
               </View>
               <AppText style={{ fontFamily: fonts.serif, fontSize: 28, color: '#fff' }}>

@@ -31,9 +31,11 @@ function useAuthGate() {
     }
 
     // Authenticated. Admins live ONLY in the admin area; investors never see it.
+    // Once signed in, the auth screens (landing/login/register/index) are off-limits
+    // — pressing back bounces the user into the app, never to the landing page.
     if (role === 'admin') {
       if (root !== 'admin' && root !== 'auth-callback' && root !== 'notifications') router.replace('/admin');
-    } else if (root === 'admin' || root === 'login' || root === 'register') {
+    } else if (root === 'admin' || root === 'login' || root === 'register' || root === 'landing' || root === 'index') {
       router.replace('/home');
     }
   }, [status, role, segments, router]);

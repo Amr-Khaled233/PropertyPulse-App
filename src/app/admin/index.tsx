@@ -29,7 +29,6 @@ import type { UserProfile, PlanTier } from '../../types/user';
 
 type Tab = 'properties' | 'inquiries' | 'users';
 const STATUSES: InquiryStatus[] = ['new', 'in_progress', 'closed'];
-const STATUS_LABEL: Record<InquiryStatus, string> = { new: 'New', in_progress: 'In Progress', closed: 'Closed', deleted: 'Deleted' };
 
 export default function AdminScreen() {
   const { theme, isDark, setPreference } = useTheme();
@@ -207,7 +206,7 @@ export default function AdminScreen() {
                   <AppText numberOfLines={1} style={{ fontFamily: fonts.semibold }}>{item.title}</AppText>
                   <AppText variant="caption" color="textMuted">{formatCompactCurrency(item.price, item.currency)} · {item.address?.city}</AppText>
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
-                    <Badge label={item.type} tone="info" />
+                    <Badge label={t(`propertyType.${item.type}`)} tone="info" />
                     {item.featured && <Badge label={t('admin.featured')} tone="warning" />}
                   </View>
                 </View>
@@ -231,7 +230,7 @@ export default function AdminScreen() {
             <Card>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <AppText style={{ fontFamily: fonts.semibold, flex: 1 }} numberOfLines={1}>{item.name}</AppText>
-                <Badge label={STATUS_LABEL[item.status]} tone={tones[item.status]} solid />
+                <Badge label={t(`notif.status.${item.status}`)} tone={tones[item.status]} solid />
                 <Pressable onPress={() => deleteInquiry(item)} hitSlop={6}><Ionicons name="trash-outline" size={18} color={c.danger} /></Pressable>
               </View>
               <AppText variant="caption" color="textMuted" style={{ marginTop: 2 }}>{[item.email, item.phone].filter(Boolean).join(' · ')}</AppText>
@@ -241,7 +240,7 @@ export default function AdminScreen() {
                   <AppText color="textSecondary" style={{ flex: 1, lineHeight: 20 }}>{item.message}</AppText>
                 </View>
               ) : null}
-              <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{item.kind.replace('_', ' ')}</AppText>
+              <AppText variant="caption" color="textMuted" style={{ marginTop: 8 }}>{t(`notif.kind.${item.kind}`)}</AppText>
 
               <View style={{ height: 1, backgroundColor: c.border, marginVertical: 12 }} />
               <AppText variant="caption" color="textMuted" style={{ marginBottom: 8 }}>{t('admin.setStatus')}</AppText>
@@ -265,7 +264,7 @@ export default function AdminScreen() {
                       }}
                     >
                       <AppText style={{ fontFamily: fonts.semibold, fontSize: 12, color: active ? '#fff' : c.textSecondary }}>
-                        {STATUS_LABEL[s]}
+                        {t(`notif.status.${s}`)}
                       </AppText>
                     </Pressable>
                   );

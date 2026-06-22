@@ -82,14 +82,14 @@ export function PropertyFormModal({ visible, editing, onClose, onSaved }: Props)
           <View style={{ gap: 8 }}>
             <AppText variant="label" color="textSecondary">{t('search.type')}</AppText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {TYPES.map((ty) => <Chip key={ty} label={ty} selected={draft.type === ty} onPress={() => set({ type: ty })} />)}
+              {TYPES.map((ty) => <Chip key={ty} label={t(`propertyType.${ty}`)} selected={draft.type === ty} onPress={() => set({ type: ty })} />)}
             </View>
           </View>
 
           <View style={{ gap: 8 }}>
             <AppText variant="label" color="textSecondary">{t('admin.status')}</AppText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {STATUSES.map((st) => <Chip key={st} label={st.replace('_', ' ')} selected={draft.status === st} onPress={() => set({ status: st })} />)}
+              {STATUSES.map((st) => <Chip key={st} label={t(`listingStatus.${st}`)} selected={draft.status === st} onPress={() => set({ status: st })} />)}
             </View>
           </View>
 

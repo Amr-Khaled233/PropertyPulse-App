@@ -34,6 +34,20 @@ export const en = {
     },
     status: { new: 'New', in_progress: 'In Progress', closed: 'Closed', deleted: 'Deleted' },
   },
+  propertyType: {
+    apartment: 'Apartment',
+    villa: 'Villa',
+    house: 'House',
+    townhouse: 'Townhouse',
+    commercial: 'Commercial',
+    land: 'Land',
+  },
+  listingStatus: {
+    for_sale: 'For Sale',
+    for_rent: 'For Rent',
+    sold: 'Sold',
+    off_market: 'Off Market',
+  },
   auth: {
     welcome: 'Welcome back',
     welcomeSub: 'Sign in to your investment dashboard',
